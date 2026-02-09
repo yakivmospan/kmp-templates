@@ -13,8 +13,6 @@ This is a Kotlin Multiplatform project targeting Android, iOS.
   you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
 
 * [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
 
 ### Build and Run Android Application
 
@@ -37,3 +35,28 @@ in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and r
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+
+
+## Architecture
+
+Assumptions made:
+1. We are building a modularized app with multiple features, each feature has its own domain, data, presentation layers.
+2. We have more than 10 features, so we need to ensure scalability of the architecture.
+3. We want to enforce strict separation of concerns and dependencies between layers.
+4. We want to have a clear dependency flow from core modules to features to apps.
+5. We are moderate to large scale, so we need to manage complexity and maintainability.
+
+Dependency rules:
+1. Core modules - foundational, no feature dependencies
+2. Feature domain - depends only on core (common, domain)
+3. Feature data - depends on core (network, database) + own domain
+4. Feature presentation - depends only on own domain (NOT data)
+5. Feature facade - aggregates domain + data + presentation
+6. Feature DI - knows about all layers, wires them together
+7. Apps - depend on feature facades + DI modules
+
+Key architectural enforcement:
+- Presentation NEVER depends on Data (only Domain)
+- Domain NEVER depends on Data or Presentation
+- Data implements Domain contracts
+- Apps choose which features to include

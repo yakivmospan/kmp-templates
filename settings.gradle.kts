@@ -30,3 +30,17 @@ dependencyResolutionManagement {
 
 // Android App
 include(":composeApp")
+
+// Core Modules
+include(":shared:core:common")
+include(":shared:core:domain")
+include(":shared:core:network")
+include(":shared:core:storage")
+include(":shared:core:di")
+
+// Product Catalog Feature Modules
+include(":shared:feature:product-catalog:domain")
+include(":shared:feature:product-catalog:data")
+include(":shared:feature:product-catalog:presentation")
+include(":shared:feature:product-catalog:di")
+include(":shared:feature:product-catalog") // Facade module
