@@ -34,6 +34,7 @@ include(":composeApp")
 // Core Modules
 include(":shared:core:common")
 include(":shared:core:domain")
+include(":shared:core:data")
 include(":shared:core:network")
 include(":shared:core:storage")
 include(":shared:core:di")
