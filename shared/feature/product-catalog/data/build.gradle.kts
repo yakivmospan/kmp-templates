@@ -29,6 +29,7 @@ kotlin {
             implementation(projects.shared.core.common)
             implementation(projects.shared.core.network)
             implementation(projects.shared.core.storage)
+            implementation(projects.shared.core.data)
             implementation(projects.shared.feature.productCatalog.domain)
 
             implementation(libs.kotlinx.serialization.json)
