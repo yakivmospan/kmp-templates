@@ -1,6 +1,7 @@
 package com.yakivmospan.templates.feature.productcatalog.presentation
 
 data class ProductCatalogState(
+    val searchResult: List<ProductCatalogViewData> = emptyList(),
     val products: List<ProductCatalogViewData> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,

@@ -42,6 +42,11 @@ kotlin {
             implementation(libs.androidx.appcompat)
             implementation(libs.androidx.navigation.runtime.ktx)
             implementation(libs.androidx.navigation.compose)
+            implementation(libs.androidx.compose.material.icons.extended)
+
+            // Coil
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
         }
 
         commonMain.dependencies {

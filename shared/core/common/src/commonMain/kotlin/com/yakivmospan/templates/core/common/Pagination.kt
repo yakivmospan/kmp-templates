@@ -10,8 +10,8 @@ data class PaginatedData<T>(
 )
 
 data class PageRequest(
-    val page: Int = 1,
-    val pageSize: Int = 20,
+    val page: Int,
+    val pageSize: Int,
     val sortBy: String? = null,
     val sortDirection: SortDirection = SortDirection.ASC
 )

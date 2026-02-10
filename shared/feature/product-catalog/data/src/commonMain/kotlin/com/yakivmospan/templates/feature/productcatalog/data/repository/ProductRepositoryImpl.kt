@@ -57,9 +57,10 @@ class ProductRepositoryImpl(
         }
 
     override fun observeProducts(): Flow<List<Product>> = flow {
-        when (val result = getProducts()) {
-            is Result.Success -> emit(result.data.items)
-            is Result.Error -> emit(emptyList())
-        }
+        emit(emptyList<Product>())
+//        when (val result = getProducts()) {
+//            is Result.Success -> emit(result.data.items)
+//            is Result.Error -> emit(emptyList())
+//        }
     }.flowOn(dispatchers.io)
 }

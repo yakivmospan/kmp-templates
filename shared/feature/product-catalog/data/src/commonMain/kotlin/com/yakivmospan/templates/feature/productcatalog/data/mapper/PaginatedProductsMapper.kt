@@ -11,9 +11,12 @@ class PaginatedProductsMapper(
 ) : Mapper<PaginatedProductResponse<ProductResponse>, PaginatedData<Product>> {
 
     override fun map(input: PaginatedProductResponse<ProductResponse>): PaginatedData<Product> {
+        // Ensure limit is positive to avoid division by zero
+        val safeLimit = if (input.limit > 0) input.limit else 1
+
         // Calculate current page from skip and limit
-        val currentPage = (input.skip / input.limit) + 1
-        val totalPages = (input.total + input.limit - 1) / input.limit
+        val currentPage = (input.skip / safeLimit) + 1
+        val totalPages = (input.total + safeLimit - 1) / safeLimit
 
         return PaginatedData(
             items = input.products.map { productMapper.map(it) },

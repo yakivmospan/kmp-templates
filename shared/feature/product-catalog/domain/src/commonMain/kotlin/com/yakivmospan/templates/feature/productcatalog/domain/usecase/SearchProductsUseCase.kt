@@ -9,7 +9,7 @@ import com.yakivmospan.templates.feature.productcatalog.domain.repository.Produc
 
 data class SearchProductsParams(
     val query: String,
-    val pageRequest: PageRequest = PageRequest()
+    val pageRequest: PageRequest
 )
 
 class SearchProductsUseCase(

@@ -3,16 +3,21 @@ package com.yakivmospan.templates.feature.productcatalog.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yakivmospan.templates.core.common.PageRequest
+import com.yakivmospan.templates.core.common.PaginatedData
 import com.yakivmospan.templates.core.common.Result
 import com.yakivmospan.templates.core.domain.DomainException
 import com.yakivmospan.templates.core.navigation.Navigator
+import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig.PAGE_PAGINATION_SIZE
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig.SEARCH_DEBOUNCE_MS
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
@@ -37,142 +42,165 @@ class ProductCatalogViewModel(
         observeSearchQuery()
     }
 
+    fun onEvent(event: ProductCatalogEvent) {
+        when (event) {
+            is ProductCatalogEvent.LoadPage -> loadProducts(page = event.page)
+            is ProductCatalogEvent.LoadNextPage -> onLoadNextPageEvent()
+            is ProductCatalogEvent.SelectProduct -> onSelectProductEvent(event.productId)
+            is ProductCatalogEvent.SearchProducts -> onSearchEvent(event)
+            is ProductCatalogEvent.ClearSearch -> onClearSearchEvent()
+            is ProductCatalogEvent.Retry -> onRetryEvent()
+        }
+    }
+
+    // Product Loading & Pagination
+    private fun loadProducts(page: Int = 1) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            val pageRequest = PageRequest(page = page, pageSize = PAGE_PAGINATION_SIZE)
+            when (val result = getProductsUseCase(pageRequest)) {
+                is Result.Success -> onLoadProductsSuccess(result)
+                is Result.Error -> onLoadProductsError(result)
+            }
+        }
+    }
+
+    private fun onLoadProductsSuccess(result: Result.Success<PaginatedData<Product>>) = _state.update {
+        it.copy(
+            products = result.data.items.map { item -> viewDataMapper.map(item) },
+            isLoading = false,
+            currentPage = result.data.currentPage,
+            totalPages = result.data.totalPages,
+            hasNextPage = result.data.hasNextPage,
+            hasPreviousPage = result.data.hasPreviousPage
+        )
+    }
+
+    private fun onLoadProductsError(result: Result.Error) = _state.update {
+        it.copy(
+            isLoading = false,
+            error = mapErrorMessage(result.exception)
+        )
+    }
+
+    private fun onLoadNextPageEvent() {
+        val currentState = _state.value
+        if (!currentState.hasNextPage || currentState.isLoading) return
+
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            val nextPage = currentState.currentPage + 1
+            val pageRequest = PageRequest(page = nextPage, pageSize = PAGE_PAGINATION_SIZE)
+            when (val result = getProductsUseCase(pageRequest)) {
+                is Result.Success -> loadNextPageSuccess(currentState, result)
+                is Result.Error -> loadNextPageError(result)
+            }
+        }
+    }
+
+    private fun loadNextPageSuccess(
+        currentState: ProductCatalogState,
+        result: Result.Success<PaginatedData<Product>>
+    ) = _state.update {
+        it.copy(
+            products = currentState.products + result.data.items.map { item -> viewDataMapper.map(item) },
+            isLoading = false,
+            currentPage = result.data.currentPage,
+            totalPages = result.data.totalPages,
+            hasNextPage = result.data.hasNextPage,
+            hasPreviousPage = result.data.hasPreviousPage
+        )
+    }
+
+    private fun loadNextPageError(result: Result.Error) {
+        _state.update {
+            it.copy(
+                isLoading = false,
+                error = mapErrorMessage(result.exception)
+            )
+        }
+    }
+
+    private suspend fun searchProducts(query: String) {
+        _state.update { it.copy(isSearching = true, error = null) }
+
+        val params = SearchProductsParams(
+            query = query,
+            pageRequest = PageRequest(page = 1, pageSize = PAGE_PAGINATION_SIZE)
+        )
+        when (val result = searchProductsUseCase(params)) {
+            is Result.Success -> onSearchSuccess(result)
+            is Result.Error -> onSearchError(result)
+        }
+    }
+
+    private fun onSearchSuccess(result: Result.Success<PaginatedData<Product>>) = _state.update {
+        it.copy(
+            searchResult = result.data.items.map { item -> viewDataMapper.map(item) },
+            isSearching = false
+        )
+    }
+
+    private fun onSearchError(result: Result.Error) = _state.update {
+        it.copy(
+            searchResult = emptyList(),
+            isSearching = false,
+            error = mapErrorMessage(result.exception)
+        )
+    }
+
+    // Search
     private fun observeSearchQuery() = viewModelScope.launch {
         _searchQuery
-            .debounce(300)
+            .debounce(SEARCH_DEBOUNCE_MS)
             .distinctUntilChanged()
-            .collect { query ->
+            .collectLatest { query ->
                 if (query.isBlank()) {
-                    loadProducts()
+                    clearSearchResults()
                 } else {
                     searchProducts(query)
                 }
             }
     }
 
-    fun onEvent(event: ProductCatalogEvent) {
-        when (event) {
-            is ProductCatalogEvent.LoadProducts -> loadProducts()
-            is ProductCatalogEvent.LoadPage -> loadProducts(page = event.page)
-            is ProductCatalogEvent.LoadNextPage -> loadNextPage()
-            is ProductCatalogEvent.LoadPreviousPage -> loadPreviousPage()
-            is ProductCatalogEvent.SelectProduct -> {
-                // Handle product selection - navigate to detail screen
-                navigator.navigate(ProductCatalogNavigationTargets.ToProductDetails(event.productId))
-            }
-
-            is ProductCatalogEvent.SearchProducts -> {
-                _searchQuery.value = event.query
-            }
-
-            is ProductCatalogEvent.ClearSearch -> clearSearch()
-            is ProductCatalogEvent.Retry -> retry()
-        }
+    private fun onSearchEvent(event: ProductCatalogEvent.SearchProducts) {
+        _searchQuery.value = event.query
     }
 
-    private fun loadProducts(page: Int = 1) {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
-            val pageRequest = PageRequest(page = page, pageSize = 20)
-
-            when (val result = getProductsUseCase(pageRequest)) {
-                is Result.Success -> {
-                    _state.update {
-                        it.copy(
-                            products = result.data.items.map { item -> viewDataMapper.map(item) },
-                            isLoading = false,
-                            currentPage = result.data.currentPage,
-                            totalPages = result.data.totalPages,
-                            hasNextPage = result.data.hasNextPage,
-                            hasPreviousPage = result.data.hasPreviousPage
-                        )
-                    }
-                }
-
-                is Result.Error -> {
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = mapErrorMessage(result.exception)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private fun searchProducts(query: String) {
-        viewModelScope.launch {
-            _state.update { it.copy(isSearching = true, error = null) }
-
-            val params = SearchProductsParams(
-                query = query,
-                pageRequest = PageRequest(page = 1, pageSize = 20)
-            )
-
-            when (val result = searchProductsUseCase(params)) {
-                is Result.Success -> {
-                    _state.update {
-                        it.copy(
-                            products = result.data.items.map { item -> viewDataMapper.map(item) },
-                            isSearching = false,
-                            currentPage = result.data.currentPage,
-                            totalPages = result.data.totalPages,
-                            hasNextPage = result.data.hasNextPage,
-                            hasPreviousPage = result.data.hasPreviousPage
-                        )
-                    }
-                }
-
-                is Result.Error -> {
-                    _state.update {
-                        it.copy(
-                            isSearching = false,
-                            error = mapErrorMessage(result.exception)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private fun clearSearch() {
+    private fun onClearSearchEvent() {
         _searchQuery.value = ""
     }
 
-    private fun loadNextPage() {
-        val currentState = _state.value
-        if (!currentState.hasNextPage || currentState.isLoading) return
-
-        if (_searchQuery.value.isNotBlank()) {
-            searchProducts(_searchQuery.value)
-        } else {
-            loadProducts(page = currentState.currentPage + 1)
+    private fun clearSearchResults() {
+        _state.update {
+            it.copy(
+                searchResult = emptyList(),
+                isSearching = false
+            )
         }
     }
 
-    private fun loadPreviousPage() {
-        val currentState = _state.value
-        if (!currentState.hasPreviousPage || currentState.isLoading) return
+
+    // Other Events
+    private fun onRetryEvent() {
+        _state.update { it.copy(error = null) }
 
         if (_searchQuery.value.isNotBlank()) {
-            searchProducts(_searchQuery.value)
-        } else {
-            loadProducts(page = currentState.currentPage - 1)
-        }
-    }
-
-    private fun retry() {
-        if (_searchQuery.value.isNotBlank()) {
-            searchProducts(_searchQuery.value)
+            viewModelScope.launch {
+                searchProducts(_searchQuery.value)
+            }
         } else {
             loadProducts(page = _state.value.currentPage)
         }
     }
 
+    private fun onSelectProductEvent(productId: Int) {
+        navigator.navigate(ProductCatalogNavigationTargets.ToProductDetails(productId))
+    }
 
-    // Simple error mapping function, in reality we could be updating all sort of state properties based on error type
+    // Utils
     private fun mapErrorMessage(exception: Throwable): String {
         return when (exception) {
             is DomainException.NetworkError -> "Network error. Please check your connection."
