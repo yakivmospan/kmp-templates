@@ -27,6 +27,8 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.shared.core.common)
             implementation(projects.shared.core.domain)
+
+            implementation(libs.kotlinx.coroutines.core)
         }
     }
 }
