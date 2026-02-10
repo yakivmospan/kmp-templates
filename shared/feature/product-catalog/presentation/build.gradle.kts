@@ -26,6 +26,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.shared.core.common)
+            implementation(projects.shared.core.domain)
             implementation(projects.shared.feature.productCatalog.domain)
 
             // KMP ViewModel
