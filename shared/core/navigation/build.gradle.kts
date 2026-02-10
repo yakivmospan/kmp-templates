@@ -18,22 +18,30 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "ProductCatalog"
+            baseName = "NavigationCommon"
             isStatic = true
         }
     }
 
     sourceSets {
         commonMain.dependencies {
-            api(projects.shared.feature.productCatalog.domain)
-            api(projects.shared.feature.productCatalog.data)
-            api(projects.shared.feature.productCatalog.presentation)
+            implementation(libs.kotlinx.coroutines.core)
+        }
+
+        androidMain.dependencies {
+            // Android-specific dependencies if needed
+            implementation(libs.compose.ui)
+            implementation(libs.compose.runtime)
+        }
+
+        iosMain.dependencies {
+            // iOS-specific dependencies if needed
         }
     }
 }
 
 android {
-    namespace = "com.yakivmospan.templates.feature.productcatalog"
+    namespace = "com.yakivmospan.templates.core.navigation"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {

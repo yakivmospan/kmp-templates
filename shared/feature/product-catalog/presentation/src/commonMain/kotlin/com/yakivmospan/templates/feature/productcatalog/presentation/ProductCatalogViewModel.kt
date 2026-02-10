@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.yakivmospan.templates.core.common.PageRequest
 import com.yakivmospan.templates.core.common.Result
 import com.yakivmospan.templates.core.domain.DomainException
+import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
@@ -19,8 +20,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class ProductCatalogViewModel(
+    private val navigator: Navigator,
     private val getProductsUseCase: GetProductsUseCase,
-    private val searchProductsUseCase: SearchProductsUseCase
+    private val searchProductsUseCase: SearchProductsUseCase,
+    private val viewDataMapper: ProductCatalogViewDataMapper
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductCatalogState())
@@ -55,6 +58,7 @@ class ProductCatalogViewModel(
             is ProductCatalogEvent.LoadPreviousPage -> loadPreviousPage()
             is ProductCatalogEvent.SelectProduct -> {
                 // Handle product selection - navigate to detail screen
+                navigator.navigate(ProductCatalogNavigationTargets.ToProductDetails(event.productId))
             }
 
             is ProductCatalogEvent.SearchProducts -> {
@@ -76,7 +80,7 @@ class ProductCatalogViewModel(
                 is Result.Success -> {
                     _state.update {
                         it.copy(
-                            products = result.data.items,
+                            products = result.data.items.map { item -> viewDataMapper.map(item) },
                             isLoading = false,
                             currentPage = result.data.currentPage,
                             totalPages = result.data.totalPages,
@@ -111,7 +115,7 @@ class ProductCatalogViewModel(
                 is Result.Success -> {
                     _state.update {
                         it.copy(
-                            products = result.data.items,
+                            products = result.data.items.map { item -> viewDataMapper.map(item) },
                             isSearching = false,
                             currentPage = result.data.currentPage,
                             totalPages = result.data.totalPages,

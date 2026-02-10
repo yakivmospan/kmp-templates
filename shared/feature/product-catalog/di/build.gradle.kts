@@ -28,7 +28,8 @@ kotlin {
             implementation(projects.shared.core.common)
             implementation(projects.shared.core.domain)
             implementation(projects.shared.core.data)
-            implementation(projects.shared.core.di)
+            implementation(projects.shared.core.navigation)
+
             implementation(projects.shared.feature.productCatalog.domain)
             implementation(projects.shared.feature.productCatalog.data)
             implementation(projects.shared.feature.productCatalog.presentation)

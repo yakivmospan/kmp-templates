@@ -1,9 +1,7 @@
 package com.yakivmospan.templates.feature.productcatalog.presentation
 
-import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
-
 data class ProductCatalogState(
-    val products: List<Product> = emptyList(),
+    val products: List<ProductCatalogViewData> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val currentPage: Int = 1,

@@ -28,7 +28,6 @@ kotlin {
             implementation(projects.shared.core.common)
             implementation(projects.shared.core.domain)
             implementation(projects.shared.core.network)
-            // Note: Does NOT depend on :storage to avoid circular deps
         }
     }
 }

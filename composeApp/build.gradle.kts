@@ -16,8 +16,13 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            // Shared modules
-            implementation(projects.shared.feature.productCatalog)
+            // Core modules
+            implementation(projects.shared.core.navigation)
+            implementation(projects.shared.core.di)
+
+            // Feature modules
+            implementation(projects.shared.feature.productCatalog.presentation)
+            implementation(projects.shared.feature.productCatalog.di)
 
             // Compose
             implementation(libs.compose.ui)
@@ -35,6 +40,8 @@ kotlin {
             // AndroidX
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.appcompat)
+            implementation(libs.androidx.navigation.runtime.ktx)
+            implementation(libs.androidx.navigation.compose)
         }
 
         commonMain.dependencies {
