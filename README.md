@@ -40,11 +40,12 @@ Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-mu
 ## Architecture
 
 Assumptions made:
-1. We are building a modularized app with multiple features, each feature has its own domain, data, presentation layers.
-2. We have more than 10 features, so we need to ensure scalability of the architecture.
-3. We want to enforce strict separation of concerns and dependencies between layers.
-4. We want to have a clear dependency flow from core modules to features to apps.
-5. We are moderate to large scale, so we need to manage complexity and maintainability.
+1. We are building an app that is as close to our production app as possible
+2. We are building a modularized app with multiple features, each feature has its own domain, data, presentation layers.
+3. We have more than 10 features, so we need to ensure scalability of the architecture.
+4. We want to enforce strict separation of concerns and dependencies between layers.
+5. We want to have a clear dependency flow from core modules to features to apps.
+6. We are moderate to large scale, so we need to manage complexity and maintainability.
 
 Dependency rules:
 1. Core modules - foundational, no feature dependencies

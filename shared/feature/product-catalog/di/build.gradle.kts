@@ -25,12 +25,16 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.shared.core.common)
+            implementation(projects.shared.core.domain)
+            implementation(projects.shared.core.data)
             implementation(projects.shared.core.di)
             implementation(projects.shared.feature.productCatalog.domain)
             implementation(projects.shared.feature.productCatalog.data)
             implementation(projects.shared.feature.productCatalog.presentation)
 
             implementation(libs.koin.core)
+            implementation(libs.ktor.client.core)
         }
 
         androidMain.dependencies {

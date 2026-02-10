@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.core.data
+package com.yakivmospan.templates.core.data.mapper
 
 import com.yakivmospan.templates.core.common.Mapper
 import com.yakivmospan.templates.core.domain.DomainException

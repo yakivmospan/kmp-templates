@@ -4,7 +4,7 @@ import com.yakivmospan.templates.core.common.DispatcherProvider
 import com.yakivmospan.templates.core.common.PageRequest
 import com.yakivmospan.templates.core.common.PaginatedData
 import com.yakivmospan.templates.core.common.Result
-import com.yakivmospan.templates.core.data.ExceptionMapper
+import com.yakivmospan.templates.core.data.mapper.ExceptionMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.PaginatedProductsMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.ProductMapper
 import com.yakivmospan.templates.feature.productcatalog.data.remote.ProductRemoteDataSource

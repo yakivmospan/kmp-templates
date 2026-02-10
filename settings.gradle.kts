@@ -31,6 +31,9 @@ dependencyResolutionManagement {
 // Android App
 include(":composeApp")
 
+// iOS App Shared Framework
+include(":iosAppFramework")
+
 // Core Modules
 include(":shared:core:common")
 include(":shared:core:domain")

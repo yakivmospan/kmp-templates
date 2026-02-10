@@ -1,5 +1,7 @@
 package com.yakivmospan.templates.feature.productcatalog.di
 
+import com.yakivmospan.templates.core.data.mapper.DefaultExceptionMapper
+import com.yakivmospan.templates.core.data.mapper.ExceptionMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.PaginatedProductsMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.ProductMapper
 import com.yakivmospan.templates.feature.productcatalog.data.remote.ProductRemoteDataSource
@@ -14,6 +16,7 @@ import org.koin.dsl.module
 val productCatalogModule = module {
     // Data layer
     single { ProductMapper() }
+    single<ExceptionMapper> { DefaultExceptionMapper() }
     single { PaginatedProductsMapper(productMapper = get()) }
     single { ProductRemoteDataSource(httpClient = get()) }
 
