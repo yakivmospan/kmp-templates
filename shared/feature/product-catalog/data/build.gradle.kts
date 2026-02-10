@@ -30,9 +30,12 @@ kotlin {
             implementation(projects.shared.core.network)
             implementation(projects.shared.core.storage)
             implementation(projects.shared.core.data)
+            implementation(projects.shared.core.domain)
             implementation(projects.shared.feature.productCatalog.domain)
 
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.ktor.client.core)
         }
     }
 }
