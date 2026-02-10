@@ -7,11 +7,15 @@ import com.yakivmospan.templates.feature.productcatalog.data.mapper.ProductMappe
 import com.yakivmospan.templates.feature.productcatalog.data.remote.ProductRemoteDataSource
 import com.yakivmospan.templates.feature.productcatalog.data.repository.ProductRepositoryImpl
 import com.yakivmospan.templates.feature.productcatalog.domain.repository.ProductRepository
-import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductByIdUseCase
+import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
+import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.DetailsViewDataToProductMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewDataMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToDetailsViewDataMapper
 import org.koin.dsl.module
 
 fun productCatalogModules() = listOf(
@@ -22,7 +26,6 @@ fun productCatalogModules() = listOf(
 
 val productCatalogDataModule = module {
     single { ProductMapper() }
-    single { ProductCatalogViewDataMapper() }
     single<ExceptionMapper> { DefaultExceptionMapper() }
     single { PaginatedProductsMapper(productMapper = get()) }
     single { ProductRemoteDataSource(httpClient = get()) }
@@ -40,17 +43,33 @@ val productCatalogDataModule = module {
 
 val productCatalogDomainModule = module {
     factory { GetProductsUseCase(repository = get()) }
-    factory { GetProductByIdUseCase(repository = get()) }
     factory { SearchProductsUseCase(repository = get()) }
+    factory { GetProductDetailsUseCase(repository = get()) }
+    factory { ToggleFavoriteUseCase(repository = get()) }
 }
 
 val productCatalogPresentationModule = module {
+    single { ProductCatalogViewDataMapper() }
+    single { ProductToDetailsViewDataMapper() }
+    single { DetailsViewDataToProductMapper() }
+
     factory {
         ProductCatalogViewModel(
             navigator = get(),
             getProductsUseCase = get(),
             searchProductsUseCase = get(),
             viewDataMapper = get()
+        )
+    }
+
+    factory { params ->
+        ProductDetailsViewModel(
+            productId = params.get(),
+            navigator = get(),
+            getProductDetailsUseCase = get(),
+            toggleFavoriteUseCase = get(),
+            productToViewDataMapper = get(),
+            viewDataToProductMapper = get()
         )
     }
 }

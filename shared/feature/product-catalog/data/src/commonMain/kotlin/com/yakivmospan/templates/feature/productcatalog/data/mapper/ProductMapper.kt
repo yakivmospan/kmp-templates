@@ -12,6 +12,7 @@ class ProductMapper : Mapper<ProductResponse, Product> {
             description = input.description,
             price = input.price,
             imageUrl = input.thumbnail,
+            isFavorite = false
         )
     }
 }

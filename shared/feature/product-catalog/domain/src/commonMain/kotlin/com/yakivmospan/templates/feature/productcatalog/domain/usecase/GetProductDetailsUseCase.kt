@@ -5,11 +5,11 @@ import com.yakivmospan.templates.core.domain.UseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.repository.ProductRepository
 
-class GetProductByIdUseCase(
+class GetProductDetailsUseCase(
     private val repository: ProductRepository
-) : UseCase<String, Result<Product>>() {
+) : UseCase<Int, Result<Product>>() {
 
-    override suspend fun invoke(params: String): Result<Product> {
+    override suspend fun invoke(params: Int): Result<Product> {
         return repository.getProductById(params)
     }
 }
