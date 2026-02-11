@@ -74,8 +74,16 @@ Technologies used:
 - Ktor for networking
 - coil for image loading
 - Moko resources for cross-platform resource management
-- *SQLDelight for database*?
-- *MockK for testing* ?
+- SQLDelight for database
+- MockK and kotlin test for unit testing
+
+## iOS Considerations
+
+- Used Moko to share resources between both platforms (it is v0.26.0.. maybe for prod we would add our own interface and
+  implementations.)
+- Added general navigation interface, to be later implemented in iOS
+- ViewModels uses events to communicate with UI, not methods - this make it easier to call them from SwiftUI, less adapter code is
+  needed, less error prone.
 
 ## Trade-offs
 
@@ -86,7 +94,18 @@ Technologies used:
   done for simplicity and speed of development.
 - There is no UI Module separation, im not sure if you are doing it in your production app, but for this sample i wanted to keep
   it simple, focusing more on shared architecture and code sharing, rather than on UI modularization.
-- List state is not preserved when navigating between tabs - this will require to update Navigator and think about iOS handling of it.
+- List state is not preserved when navigating between tabs - this will require to update Navigator and think about iOS handling of
+  it.
 - Overall state handling with navigation is not ideal and requires time for improvements.
 - `ViewModelTest` and `TestDispatcherProvider` should be moved to separate common test module
-- Favorite button can be added directly on the list items on Catalog and Favorites screens, but for simplicity it was added only on the Details scree.
+- Favorite button can be added directly on the list items on Catalog and Favorites screens, but for simplicity it was added only
+  on the Details scree.
+- No documentation was added to view models, in real life it would be good to have a solid contract for each view model,
+  describing what it does, what are its inputs and outputs, and how it should be used.
+- Not all view models have tests. Added one to show the approach.
+- Not all mappers have tests, added UI mappers only.
+- Search states can be improved, again UI is a black box here.
+- SQL exceptions are not handled in Default Domain ExceptionMapper
+- Database is created per feature. If required can be moved to a core module like we have with network. It has its own advantages
+  and disadvantages.
+- No database migration was designed.

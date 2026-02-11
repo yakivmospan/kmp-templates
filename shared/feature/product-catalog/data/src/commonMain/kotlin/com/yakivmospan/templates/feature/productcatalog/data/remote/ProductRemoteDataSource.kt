@@ -10,12 +10,18 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 
-class ProductRemoteDataSource(
+interface ProductRemoteDataSource {
+    suspend fun getProducts(pageRequest: PageRequest): PaginatedProductResponse<ProductResponse>
+    suspend fun getProductById(id: String): ProductResponse
+    suspend fun searchProducts(query: String, pageRequest: PageRequest): PaginatedProductResponse<ProductResponse>
+}
+
+class ProductRemoteDataSourceImpl(
     private val httpClient: HttpClient
-) {
+) : ProductRemoteDataSource {
     private val baseUrl = "https://dummyjson.com"
 
-    suspend fun getProducts(pageRequest: PageRequest): PaginatedProductResponse<ProductResponse> {
+    override suspend fun getProducts(pageRequest: PageRequest): PaginatedProductResponse<ProductResponse> {
         return NetworkErrorHandler.safeApiCall<PaginatedProductResponse<ProductResponse>> {
             httpClient.get("$baseUrl/products") {
                 val skip = (pageRequest.page - 1) * pageRequest.pageSize
@@ -25,13 +31,13 @@ class ProductRemoteDataSource(
         }.getOrThrow()
     }
 
-    suspend fun getProductById(id: String): ProductResponse {
+    override suspend fun getProductById(id: String): ProductResponse {
         return NetworkErrorHandler.safeApiCall {
             httpClient.get("$baseUrl/products/$id").body<ProductResponse>()
         }.getOrThrow()
     }
 
-    suspend fun searchProducts(query: String, pageRequest: PageRequest): PaginatedProductResponse<ProductResponse> {
+    override suspend fun searchProducts(query: String, pageRequest: PageRequest): PaginatedProductResponse<ProductResponse> {
         return NetworkErrorHandler.safeApiCall<PaginatedProductResponse<ProductResponse>> {
             httpClient.get("$baseUrl/products/search") {
                 parameter("q", query)

@@ -29,7 +29,6 @@ kotlin {
             implementation(projects.shared.core.data)
             implementation(projects.shared.core.domain)
             implementation(projects.shared.core.network)
-            implementation(projects.shared.core.storage)
             implementation(projects.shared.core.navigation)
 
             // Koin

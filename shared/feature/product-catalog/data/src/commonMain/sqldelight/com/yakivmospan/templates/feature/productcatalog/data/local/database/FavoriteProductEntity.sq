@@ -1,0 +1,36 @@
+-- FavoriteProductEntity table to store favorite products with full data
+CREATE TABLE FavoriteProductEntity (
+    id INTEGER NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    price REAL NOT NULL,
+    imageUrl TEXT NOT NULL
+);
+
+-- Insert or replace a favorite product
+insertFavorite:
+INSERT OR REPLACE INTO FavoriteProductEntity(id, title, description, price, imageUrl)
+VALUES (?, ?, ?, ?, ?);
+
+-- Delete a favorite product by id
+deleteFavorite:
+DELETE FROM FavoriteProductEntity
+WHERE id = ?;
+
+-- Get all favorite products
+getAllFavorites:
+SELECT * FROM FavoriteProductEntity;
+
+-- Get a favorite product by id
+getFavoriteById:
+SELECT * FROM FavoriteProductEntity
+WHERE id = ?;
+
+-- Check if a product is favorite
+isFavorite:
+SELECT COUNT(*) > 0 FROM FavoriteProductEntity
+WHERE id = ?;
+
+-- Delete all favorites (useful for testing/clearing data)
+deleteAllFavorites:
+DELETE FROM FavoriteProductEntity;

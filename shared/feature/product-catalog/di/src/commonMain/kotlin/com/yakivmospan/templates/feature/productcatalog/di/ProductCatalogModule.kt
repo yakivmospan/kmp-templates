@@ -2,9 +2,13 @@ package com.yakivmospan.templates.feature.productcatalog.di
 
 import com.yakivmospan.templates.core.data.mapper.DefaultExceptionMapper
 import com.yakivmospan.templates.core.data.mapper.ExceptionMapper
+import com.yakivmospan.templates.feature.productcatalog.data.local.FavoriteLocalDataSource
+import com.yakivmospan.templates.feature.productcatalog.data.local.FavoriteLocalDataSourceImpl
+import com.yakivmospan.templates.feature.productcatalog.data.mapper.FavoriteProductEntityMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.PaginatedProductsMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.ProductMapper
 import com.yakivmospan.templates.feature.productcatalog.data.remote.ProductRemoteDataSource
+import com.yakivmospan.templates.feature.productcatalog.data.remote.ProductRemoteDataSourceImpl
 import com.yakivmospan.templates.feature.productcatalog.data.repository.ProductRepositoryImpl
 import com.yakivmospan.templates.feature.productcatalog.domain.repository.ProductRepository
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
@@ -18,25 +22,44 @@ import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDeta
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewDataToEntityMapper
+import org.koin.core.module.Module
 import org.koin.dsl.module
+
+internal const val DATABASE_NAME = "product_catalog.db"
 
 fun productCatalogModules() = listOf(
     productCatalogDataModule,
     productCatalogDomainModule,
-    productCatalogPresentationModule
+    productCatalogPresentationModule,
+    productCatalogDatabaseModule()
 )
 
 val productCatalogDataModule = module {
+    // Mappers
     single { ProductMapper() }
+    single { FavoriteProductEntityMapper() }
     single<ExceptionMapper> { DefaultExceptionMapper() }
     single { PaginatedProductsMapper(productMapper = get()) }
-    single { ProductRemoteDataSource(httpClient = get()) }
 
+    // Data Sources
+    single<ProductRemoteDataSource> {
+        ProductRemoteDataSourceImpl(httpClient = get())
+    }
+    single<FavoriteLocalDataSource> {
+        FavoriteLocalDataSourceImpl(
+            database = get(),
+            dispatchers = get()
+        )
+    }
+
+    // Repository
     single<ProductRepository> {
         ProductRepositoryImpl(
             remoteDataSource = get(),
+            localDataSource = get(),
             productMapper = get(),
             paginatedProductsMapper = get(),
+            favoriteProductEntityMapper = get(),
             exceptionMapper = get(),
             dispatchers = get()
         )
@@ -85,3 +108,5 @@ val productCatalogPresentationModule = module {
         )
     }
 }
+
+expect fun productCatalogDatabaseModule(): Module

@@ -93,14 +93,14 @@ fun ProductCatalogScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
+            val isSearchMode = searchQuery.value.isNotBlank()
+
             // Determine which items to display
-            val displayItems = if (searchQuery.value.isNotBlank()) {
+            val displayItems = if (isSearchMode && state.value.isSearching) {
                 state.value.searchResult
             } else {
                 state.value.products
             }
-
-            val isSearchMode = searchQuery.value.isNotBlank()
 
             // Content Area - Handle loading, empty, and content states
             Box(

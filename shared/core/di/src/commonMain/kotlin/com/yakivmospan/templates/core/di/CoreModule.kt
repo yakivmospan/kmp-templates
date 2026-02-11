@@ -7,7 +7,6 @@ import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.core.navigation.NavigatorCommandsFlow
 import com.yakivmospan.templates.core.navigation.NavigatorResultsFlow
 import com.yakivmospan.templates.core.network.defaultHttpClientFactoryProvider
-import com.yakivmospan.templates.core.storage.defaultStorageFactoryProvider
 import org.koin.dsl.module
 
 fun coreModules() = listOf(
@@ -24,6 +23,5 @@ val coreNavigationModule = module {
 
 val coreServicesModule = module {
     single { defaultHttpClientFactoryProvider().create() }
-    single { defaultStorageFactoryProvider() }
     single<DispatcherProvider> { defaultDispatcherProvider() }
 }

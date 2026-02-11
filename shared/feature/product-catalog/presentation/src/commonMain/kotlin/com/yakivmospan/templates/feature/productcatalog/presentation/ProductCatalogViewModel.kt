@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -155,6 +156,8 @@ class ProductCatalogViewModel(
     // Search
     private fun observeSearchQuery() = viewModelScope.launch {
         _searchQuery
+            // Show loading before debounce to provide immediate feedback
+            .onEach { _state.update { it.copy(isSearching = true) } }
             .debounce(SEARCH_DEBOUNCE_MS)
             .distinctUntilChanged()
             .collectLatest { query ->
