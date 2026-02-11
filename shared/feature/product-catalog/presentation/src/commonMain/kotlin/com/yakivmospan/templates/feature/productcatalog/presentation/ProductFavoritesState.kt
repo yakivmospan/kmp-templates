@@ -5,5 +5,4 @@ data class ProductFavoritesState(
     val searchResult: List<ProductViewData> = emptyList(),
     val isLoading: Boolean = false,
     val isSearching: Boolean = false,
-    val error: String? = null
 )

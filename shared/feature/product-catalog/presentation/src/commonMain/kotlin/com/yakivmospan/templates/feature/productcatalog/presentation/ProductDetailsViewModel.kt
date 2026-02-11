@@ -9,9 +9,12 @@ import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
-import dev.icerock.moko.resources.format
+import dev.icerock.moko.resources.desc.StringDesc
+import dev.icerock.moko.resources.desc.desc
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -28,6 +31,9 @@ class ProductDetailsViewModel(
     private val _state = MutableStateFlow(ProductDetailsState())
     val state: StateFlow<ProductDetailsState> = _state.asStateFlow()
 
+    private val _errorEvent = MutableSharedFlow<StringDesc>(extraBufferCapacity = 1)
+    val errorEvent = _errorEvent.asSharedFlow()
+
     init {
         loadProduct()
     }
@@ -38,13 +44,12 @@ class ProductDetailsViewModel(
             is ProductDetailsEvent.ToggleFavorite -> onToggleFavoriteEvent()
             is ProductDetailsEvent.NavigateBack -> onNavigateBackEvent()
             is ProductDetailsEvent.Retry -> onRetryEvent()
-            is ProductDetailsEvent.ClearError -> onClearErrorEvent()
         }
     }
 
     // Product Loading
     private fun loadProduct(id: Int = productId) = viewModelScope.launch {
-        _state.update { it.copy(isLoading = true, error = null) }
+        _state.update { it.copy(isLoading = true) }
 
         when (val result = getProductDetailsUseCase(id)) {
             is Result.Success -> onLoadProductSuccess(result)
@@ -59,11 +64,9 @@ class ProductDetailsViewModel(
         )
     }
 
-    private fun onLoadProductError(result: Result.Error) = _state.update {
-        it.copy(
-            isLoading = false,
-            error = mapErrorMessage(result.exception)
-        )
+    private fun onLoadProductError(result: Result.Error) {
+        _state.update { it.copy(isLoading = false) }
+        _errorEvent.tryEmit(mapErrorMessage(result.exception))
     }
 
     // Toggle Favorite
@@ -85,7 +88,7 @@ class ProductDetailsViewModel(
             is Result.Error -> {
                 // Revert optimistic update on error
                 _state.update { it.copy(product = currentProduct) }
-                _state.update { it.copy(error = mapErrorMessage(result.exception)) }
+                _errorEvent.tryEmit(mapErrorMessage(result.exception))
             }
         }
     }
@@ -95,38 +98,18 @@ class ProductDetailsViewModel(
         navigator.back()
     }
 
-    // Retry
-    private fun onClearErrorEvent() {
-        _state.update { it.copy(error = null) }
-    }
-
     private fun onRetryEvent() {
-        _state.update { it.copy(error = null) }
         loadProduct()
     }
 
     // Utils
     private fun mapErrorMessage(exception: Throwable) = when (exception) {
-        is DomainException.NetworkError -> MR.strings.pd_catalog_feature_network_error_message.toString()
-        is DomainException.ServerError -> mapServerErrorMessage(exception)
-        is DomainException.Unauthorized -> MR.strings.pd_catalog_feature_unauthorized_error_message.toString()
-        is DomainException.NotFound -> MR.strings.pd_catalog_feature_product_not_found_error.toString()
-        is DomainException.Timeout -> MR.strings.pd_catalog_feature_timeout_error_message.toString()
-        is DomainException.Unknown -> exception.errorMessage
-        else -> exception.message ?: MR.strings.pd_catalog_feature_generic_error_message.toString()
-    }
-
-    private fun mapServerErrorMessage(
-        exception: DomainException.ServerError
-    ) = buildString {
-        append(exception.errorMessage)
-
-        exception.errorCode?.let {
-            append(MR.strings.pd_catalog_feature_error_code_format.format(it).toString())
-        }
-
-        exception.errorDetails?.entries?.firstOrNull()?.let { (_, value) ->
-            append(MR.strings.pd_catalog_feature_error_details_format.format(value).toString())
-        }
+        is DomainException.NetworkError -> MR.strings.pd_catalog_feature_network_error_message.desc()
+        is DomainException.ServerError -> exception.errorMessage.desc()
+        is DomainException.Unauthorized -> MR.strings.pd_catalog_feature_unauthorized_error_message.desc()
+        is DomainException.NotFound -> MR.strings.pd_catalog_feature_product_not_found_error.desc()
+        is DomainException.Timeout -> MR.strings.pd_catalog_feature_timeout_error_message.desc()
+        is DomainException.Unknown -> exception.errorMessage.desc()
+        else -> exception.message?.desc() ?: MR.strings.pd_catalog_feature_generic_error_message.desc()
     }
 }

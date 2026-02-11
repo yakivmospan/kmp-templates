@@ -5,5 +5,4 @@ sealed class ProductFavoritesEvent {
     data class SearchFavorites(val query: String) : ProductFavoritesEvent()
     data object ClearSearch : ProductFavoritesEvent()
     data object Retry : ProductFavoritesEvent()
-    data object ClearError : ProductFavoritesEvent()
 }

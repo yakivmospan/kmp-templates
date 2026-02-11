@@ -143,7 +143,6 @@ private let viewModel: ProductCatalogViewModel
 
 - UI is mostly done with AI and its code was not properly reviewed, only manually tested and iterated over.
 - UI may have hardcoded values.
-- Price formatting is done on the UI layer.
 - All UI items share one ViewData object, so Details screen shows the same data as the List screen, which is not ideal but was
   done for simplicity and speed of development.
 - There is no UI Module separation, im not sure if you are doing it in your production app, but for this sample i wanted to keep
@@ -165,4 +164,3 @@ private let viewModel: ProductCatalogViewModel
 - No database migration was designed.
 - NO ASC, DESC implemented, even though PageRequest has it. No sorting is implemented at all, but it can be easily added in the
   future.
-- Simple clear error was used to clean up errors, would be better to have error flow like with search query.

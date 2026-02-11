@@ -5,10 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
+import dev.icerock.moko.resources.desc.StringDesc
+import dev.icerock.moko.resources.desc.desc
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
@@ -32,6 +36,9 @@ class ProductFavoritesViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _errorEvent = MutableSharedFlow<StringDesc>(extraBufferCapacity = 1)
+    val errorEvent = _errorEvent.asSharedFlow()
+
     // Store all favorites for filtering
     private var allFavorites: List<ProductViewData> = emptyList()
     private var observeFavoritesJob: Job? = null
@@ -47,14 +54,13 @@ class ProductFavoritesViewModel(
             is ProductFavoritesEvent.Retry -> observeFavorites()
             is ProductFavoritesEvent.SearchFavorites -> onSearchEvent(event.query)
             is ProductFavoritesEvent.ClearSearch -> onClearSearchEvent()
-            is ProductFavoritesEvent.ClearError -> onClearErrorEvent()
         }
     }
 
     private fun observeFavorites() {
         observeFavoritesJob?.cancel()
         observeFavoritesJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
             observeFavoritesUseCase()
                 .catch { onFavoritesLoadError(it) }
                 .collect { onFavoritesChanged(it) }
@@ -72,23 +78,14 @@ class ProductFavoritesViewModel(
             it.copy(
                 favorites = allFavorites,
                 searchResult = filteredFavorites,
-                isLoading = false,
-                error = null
+                isLoading = false
             )
         }
     }
 
     private fun onFavoritesLoadError(exception: Throwable) {
-        _state.update {
-            it.copy(
-                isLoading = false,
-                error = exception.message ?: MR.strings.pd_catalog_feature_generic_error_message.toString()
-            )
-        }
-    }
-
-    private fun onClearErrorEvent() {
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(isLoading = false) }
+        _errorEvent.tryEmit(exception.message?.desc() ?: MR.strings.pd_catalog_feature_generic_error_message.desc())
     }
 
     // Search functionality

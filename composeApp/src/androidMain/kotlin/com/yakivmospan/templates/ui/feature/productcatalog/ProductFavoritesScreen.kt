@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +38,7 @@ import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesEvent
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
+import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import org.koin.androidx.compose.koinViewModel
 
@@ -51,16 +53,14 @@ fun ProductFavoritesScreen(
     val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
 
     // Handle error display in Snackbar
-    LaunchedEffect(state.value.error) {
-        state.value.error?.let { errorMessage ->
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.errorEvent.collect { error ->
             val result = snackbarHostState.showSnackbar(
-                message = errorMessage,
+                message = error.toString(context),
                 actionLabel = retryButtonLabel,
                 duration = SnackbarDuration.Long
             )
-
-            viewModel.onEvent(ProductFavoritesEvent.ClearError)
-
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.onEvent(ProductFavoritesEvent.Retry)
             }

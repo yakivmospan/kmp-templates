@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,7 +55,9 @@ import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsEvent
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
+import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
+import dev.icerock.moko.resources.desc.desc
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -70,20 +73,18 @@ fun ProductDetailsScreen(
     val state = viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
+    val context = LocalContext.current
 
     // Handle error display in Snackbar (only when product is loaded)
-    LaunchedEffect(state.value.error) {
-        state.value.error?.let { errorMessage ->
+    LaunchedEffect(Unit) {
+        viewModel.errorEvent.collect { error ->
             // Only show snackbar if we have a product (for refresh errors)
             if (state.value.product != null) {
                 val result = snackbarHostState.showSnackbar(
-                    message = errorMessage,
+                    message = error.toString(context),
                     actionLabel = retryButtonLabel,
                     duration = SnackbarDuration.Long
                 )
-
-                viewModel.onEvent(ProductDetailsEvent.ClearError)
-
                 if (result == SnackbarResult.ActionPerformed) {
                     viewModel.onEvent(ProductDetailsEvent.Retry)
                 }
@@ -134,9 +135,12 @@ fun ProductDetailsScreen(
                 .fillMaxSize()
                 .padding(scaffoldPadding)
         ) {
+
+            val product = state.value.product
+
             when {
                 // Loading state (initial load only)
-                state.value.isLoading && state.value.product == null -> {
+                state.value.isLoading && product == null -> {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -145,7 +149,7 @@ fun ProductDetailsScreen(
                 }
 
                 // Content state with PullToRefresh
-                state.value.product != null -> {
+                product != null -> {
                     PullToRefreshBox(
                         isRefreshing = state.value.isLoading,
                         onRefresh = {
@@ -160,7 +164,7 @@ fun ProductDetailsScreen(
                         ) {
                             // Image section with FAB
                             ProductImageSection(
-                                product = state.value.product!!,
+                                product = product,
                                 onToggleFavorite = {
                                     viewModel.onEvent(ProductDetailsEvent.ToggleFavorite)
                                 }
@@ -168,26 +172,19 @@ fun ProductDetailsScreen(
 
                             // Details section
                             ProductDetailsSection(
-                                product = state.value.product!!
+                                product = product
                             )
                         }
                     }
                 }
 
                 // Error state (failed to load product)
-                !state.value.isLoading && state.value.product == null && state.value.error != null -> {
+                !state.value.isLoading -> {
                     ErrorState(
-                        errorMessage = state.value.error!!,
+                        errorMessage = MR.strings.pd_catalog_feature_generic_error_message.desc().localized(),
                         onRetry = {
                             viewModel.onEvent(ProductDetailsEvent.Retry)
                         },
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-
-                // Empty state (product not found after loading)
-                !state.value.isLoading && state.value.product == null && state.value.error == null -> {
-                    EmptyProductState(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }

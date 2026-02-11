@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,18 +49,16 @@ fun ProductCatalogScreen(
     val searchQuery = productCatalogViewModel.searchQuery.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
+    val context = LocalContext.current
 
     // Handle error display in Snackbar
-    LaunchedEffect(state.value.error) {
-        state.value.error?.let { errorMessage ->
+    LaunchedEffect(Unit) {
+        productCatalogViewModel.errorEvent.collect { error ->
             val result = snackbarHostState.showSnackbar(
-                message = errorMessage,
+                message = error.toString(context),
                 actionLabel = retryButtonLabel,
                 duration = SnackbarDuration.Long
             )
-
-            productCatalogViewModel.onEvent(ProductCatalogEvent.ClearError)
-
             if (result == SnackbarResult.ActionPerformed) {
                 productCatalogViewModel.onEvent(ProductCatalogEvent.Retry)
             }

@@ -2,13 +2,17 @@ package com.yakivmospan.templates.feature.productcatalog.presentation
 
 import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
+import dev.icerock.moko.resources.desc.RawStringDesc
+import dev.icerock.moko.resources.desc.StringDesc
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,10 +43,9 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         // Then
         val expectedState = ProductFavoritesState(
             favorites = emptyList(),
-            searchResult = emptyList(), // Empty query returns all favorites (which is empty)
+            searchResult = emptyList(),
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("", viewModel.searchQuery.value)
@@ -63,53 +66,68 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val expectedFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = expectedFavorites,
-            searchResult = expectedFavorites, // When query is blank, searchResult equals all favorites
+            searchResult = expectedFavorites,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("", viewModel.searchQuery.value)
     }
 
-    // Step 3: Favorites Loading Error
+    // Step 3: Favorites Loading Error - state after error
     @Test
-    fun `favorites loading error should update state with error message`() = runTest {
+    fun `favorites loading error should set loading false and keep empty state`() = runTest {
+        // Given
+        every { observeFavoritesUseCase() } returns flow {
+            throw Exception("Network error")
+        }
+
+        val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then - state is correct regardless of event
+        assertEquals(
+            ProductFavoritesState(isLoading = false),
+            viewModel.state.value
+        )
+    }
+
+    // Step 3b: Favorites Loading Error - error event is emitted
+    @Test
+    fun `favorites loading error should emit error event`() = runTest {
         // Given
         val errorMessage = "Network error"
+        var emittedError: StringDesc? = null
+
+        // Collector ready BEFORE ViewModel init runs
         every { observeFavoritesUseCase() } returns flow {
             throw Exception(errorMessage)
         }
 
-        // When
         val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
+
+        val collectJob = launch {
+            viewModel.errorEvent.collect { emittedError = it }
+        }
+        testDispatcher.scheduler.runCurrent() // let collector subscribe
+
+        // Trigger error again via retry now that collector is ready
+        viewModel.onEvent(ProductFavoritesEvent.Retry)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Then
-        val expectedState = ProductFavoritesState(
-            favorites = emptyList(),
-            searchResult = emptyList(),
-            isLoading = false,
-            isSearching = false,
-            error = errorMessage
-        )
-        assertEquals(expectedState, viewModel.state.value)
-        assertEquals("", viewModel.searchQuery.value)
+        assertEquals(errorMessage, (emittedError as? RawStringDesc)?.string)
+        collectJob.cancel()
     }
 
     // Step 4: Retry After Error
     @Test
     fun `retry event should reload favorites after error`() = runTest {
         // Given - Initial error state
-        val errorMessage = "Network error"
         every { observeFavoritesUseCase() } returns flow {
-            throw Exception(errorMessage)
+            throw Exception("Network error")
         }
         val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
         testDispatcher.scheduler.advanceUntilIdle()
-
-        // Verify error state
-        assertEquals(errorMessage, viewModel.state.value.error)
 
         // Setup successful response for retry
         val products = ProductTestFixtures.sampleProducts
@@ -123,10 +141,9 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val expectedFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = expectedFavorites,
-            searchResult = expectedFavorites, // Query is still blank, so searchResult equals all favorites
+            searchResult = expectedFavorites,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("", viewModel.searchQuery.value)
@@ -162,8 +179,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
             favorites = allFavorites,
             searchResult = filteredResults,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("smartphone", viewModel.searchQuery.value)
@@ -207,8 +223,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
             favorites = allFavorites,
             searchResult = filteredResults,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("headphones", viewModel.searchQuery.value)
@@ -264,10 +279,9 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val allFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
-            searchResult = allFavorites, // Empty query returns all favorites
+            searchResult = allFavorites,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("", viewModel.searchQuery.value)
@@ -295,10 +309,9 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val allFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
-            searchResult = allFavorites, // Blank query returns all favorites
+            searchResult = allFavorites,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("   ", viewModel.searchQuery.value)
@@ -324,8 +337,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
             favorites = allFavorites,
             searchResult = emptyList(),
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("nonexistent product xyz", viewModel.searchQuery.value)
@@ -356,8 +368,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
             favorites = emptyList(),
             searchResult = emptyList(),
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
     }
@@ -400,44 +411,14 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
             favorites = allFavorites,
             searchResult = filteredResults,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("phone", viewModel.searchQuery.value)
         assertEquals(2, filteredResults.size) // Smartphone and Headphones match "phone"
     }
 
-    // Step 12: Clear Error Event
-    @Test
-    fun `clear error should reset error state`() = runTest {
-        // Given - Initial error state
-        val errorMessage = "Network error"
-        every { observeFavoritesUseCase() } returns flow {
-            throw Exception(errorMessage)
-        }
-        val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        // Verify error is set
-        assertEquals(errorMessage, viewModel.state.value.error)
-
-        // When - Clear error event
-        viewModel.onEvent(ProductFavoritesEvent.ClearError)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        // Then - Error should be null, other state remains unchanged
-        val expectedState = ProductFavoritesState(
-            favorites = emptyList(),
-            searchResult = emptyList(),
-            isLoading = false,
-            isSearching = false,
-            error = null
-        )
-        assertEquals(expectedState, viewModel.state.value)
-    }
-
-    // Step 13: Search observes .drop(1) correctly
+    // Step 12: Search observes .drop(1) correctly
     @Test
     fun `initial search query should be ignored not trigger search`() = runTest {
         // Given - Observe favorites normally
@@ -466,8 +447,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
             favorites = products.map { viewDataMapper.map(it) },
             searchResult = filteredResults,
             isLoading = false,
-            isSearching = false,
-            error = null
+            isSearching = false
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("laptop", viewModel.searchQuery.value)
