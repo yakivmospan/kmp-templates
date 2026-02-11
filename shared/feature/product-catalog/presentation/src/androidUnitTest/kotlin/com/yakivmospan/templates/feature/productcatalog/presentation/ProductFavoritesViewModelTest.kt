@@ -39,7 +39,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         // Then
         val expectedState = ProductFavoritesState(
             favorites = emptyList(),
-            searchResult = emptyList(),
+            searchResult = emptyList(), // Empty query returns all favorites (which is empty)
             isLoading = false,
             isSearching = false,
             error = null
@@ -63,7 +63,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val expectedFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = expectedFavorites,
-            searchResult = emptyList(),
+            searchResult = expectedFavorites, // When query is blank, searchResult equals all favorites
             isLoading = false,
             isSearching = false,
             error = null
@@ -123,7 +123,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val expectedFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = expectedFavorites,
-            searchResult = emptyList(),
+            searchResult = expectedFavorites, // Query is still blank, so searchResult equals all favorites
             isLoading = false,
             isSearching = false,
             error = null
@@ -143,12 +143,16 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
 
         // When
         viewModel.onEvent(ProductFavoritesEvent.SearchFavorites("smartphone"))
+        testDispatcher.scheduler.runCurrent()
+
+        // Then - isSearching should be true immediately (before debounce)
+        assertEquals(true, viewModel.state.value.isSearching)
 
         // Advance time by debounce duration
         testDispatcher.scheduler.advanceTimeBy(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Then
+        // Then - After debounce, search is complete
         val allFavorites = products.map { viewDataMapper.map(it) }
         val filteredResults = allFavorites.filter {
             it.title.lowercase().contains("smartphone") ||
@@ -176,10 +180,18 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
 
         // When - Send multiple rapid queries
         viewModel.onEvent(ProductFavoritesEvent.SearchFavorites("smart"))
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(true, viewModel.state.value.isSearching)
+
         testDispatcher.scheduler.advanceTimeBy(100)
         viewModel.onEvent(ProductFavoritesEvent.SearchFavorites("laptop"))
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(true, viewModel.state.value.isSearching)
+
         testDispatcher.scheduler.advanceTimeBy(100)
         viewModel.onEvent(ProductFavoritesEvent.SearchFavorites("headphones"))
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(true, viewModel.state.value.isSearching)
 
         // Advance past debounce for final query
         testDispatcher.scheduler.advanceTimeBy(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
@@ -200,6 +212,34 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         )
         assertEquals(expectedState, viewModel.state.value)
         assertEquals("headphones", viewModel.searchQuery.value)
+    }
+
+    // Step 6a: Immediate Search Feedback
+    @Test
+    fun `search should show isSearching true immediately before debounce`() = runTest {
+        // Given
+        val products = ProductTestFixtures.sampleProducts
+        every { observeFavoritesUseCase() } returns flowOf(products)
+        val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Verify initial state
+        assertEquals(false, viewModel.state.value.isSearching)
+
+        // When - Send search query but don't advance time
+        viewModel.onEvent(ProductFavoritesEvent.SearchFavorites("smartphone"))
+        testDispatcher.scheduler.runCurrent()
+
+        // Then - isSearching should be true immediately, even before debounce
+        assertEquals(true, viewModel.state.value.isSearching)
+        assertEquals("smartphone", viewModel.searchQuery.value)
+
+        // When - Advance past debounce
+        testDispatcher.scheduler.advanceTimeBy(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then - isSearching should be false after search completes
+        assertEquals(false, viewModel.state.value.isSearching)
     }
 
     // Step 7: Clear Search
@@ -224,7 +264,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val allFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
-            searchResult = emptyList(),
+            searchResult = allFavorites, // Empty query returns all favorites
             isLoading = false,
             isSearching = false,
             error = null
@@ -235,7 +275,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
 
     // Step 8: Empty Search Query
     @Test
-    fun `empty or blank search query should clear search results`() = runTest {
+    fun `empty or blank search query should return all favorites as search results`() = runTest {
         // Given - Active search with results
         val products = ProductTestFixtures.sampleProducts
         every { observeFavoritesUseCase() } returns flowOf(products)
@@ -255,7 +295,7 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         val allFavorites = products.map { viewDataMapper.map(it) }
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
-            searchResult = emptyList(),
+            searchResult = allFavorites, // Blank query returns all favorites
             isLoading = false,
             isSearching = false,
             error = null

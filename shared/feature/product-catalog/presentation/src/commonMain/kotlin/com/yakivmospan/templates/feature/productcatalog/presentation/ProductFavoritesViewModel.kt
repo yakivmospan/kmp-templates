@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -82,6 +83,8 @@ class ProductFavoritesViewModel(
     // Search functionality
     private fun observeSearchQuery() = viewModelScope.launch {
         _searchQuery
+            // Show loading before debounce to provide immediate feedback
+            .onEach { _state.update { it.copy(isSearching = true) } }
             .debounce(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
             .distinctUntilChanged()
             .collectLatest { query ->
@@ -111,7 +114,7 @@ class ProductFavoritesViewModel(
     }
 
     private fun filterFavorites(query: String): List<ProductViewData> {
-        if (query.isBlank()) return emptyList()
+        if (query.isBlank()) return allFavorites
 
         val lowercaseQuery = query.lowercase()
         return allFavorites.filter { product ->
