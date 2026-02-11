@@ -1,16 +1,14 @@
+# Kotlin Multiplatform App - Clean Architecture
+
 This is a Kotlin Multiplatform project targeting Android, iOS.
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-    - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-    - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-      For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-      the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-      Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-      folder is the appropriate location.
+* [/composeApp](./composeApp/src) contain Android application code, including UI implemented with Compose.
+  This is where you should add your Android-specific code and resources.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+* [/iosApp](./iosApp/iosApp) contains iOS applications. This is entry point for your iOS app.
+  This is also where you should add SwiftUI code for your project.
+
+* [/iosAppFramework](./iosAppFramework) module that is designed to setup `Shared` static library dependencies for `iosApp`.
 
 * [/shared](./shared/src) is for the code that will be shared between all targets in the project.
 
@@ -79,13 +77,69 @@ Technologies used:
 
 ## iOS Considerations
 
+- Koin allows easily create specific iOS modules if needed.
 - Used Moko to share resources between both platforms (it is v0.26.0.. maybe for prod we would add our own interface and
   implementations.)
 - Added general navigation interface, to be later implemented in iOS
 - ViewModels uses events to communicate with UI, not methods - this make it easier to call them from SwiftUI, less adapter code is
   needed, less error prone.
+- Created `iosAppFramework` module to setup `Shared` framework for iOS, this is where we can create the Koin module and initialize
+  it, so that it can be used in the iOS app. Had not time to setup it further.
 
-## Trade-offs
+## iOS Integration Example:
+
+```
+import SwiftUI
+import Shared
+
+struct ProductCatalogView: View {
+@StateObject private var observableState: ObservableProductCatalogState
+
+    var body: some View {
+        VStack {
+            TextField("Search", text: $observableState.searchQuery)
+            
+            if observableState.state.isSearching {
+                ProgressView()
+            }
+            
+            List(observableState.state.products, id: \.id) { product in
+                Text(product.title)
+            }
+        }
+    }
+}
+
+// Helper to bridge Flow to SwiftUI
+@MainActor
+class ObservableProductCatalogState: ObservableObject {
+private let viewModel: ProductCatalogViewModel
+
+    @Published var state: ProductCatalogState
+    @Published var searchQuery: String = ""
+    
+    init(viewModel: ProductCatalogViewModel) {
+        self.viewModel = viewModel
+        self.state = viewModel.state.value
+        
+        // Observe state
+        viewModel.state.watch { [weak self] newState in
+            self?.state = newState
+        }
+        
+        // Observe search query
+        viewModel.searchQuery.watch { [weak self] query in
+            self?.searchQuery = query
+        }
+    }
+    
+    func send(_ event: ProductCatalogEvent) {
+        viewModel.onEvent(event: event)
+    }
+}
+```
+
+# Trade-offs
 
 - UI is mostly done with AI and its code was not properly reviewed, only manually tested and iterated over.
 - UI may have hardcoded values.
@@ -109,4 +163,5 @@ Technologies used:
 - Database is created per feature. If required can be moved to a core module like we have with network. It has its own advantages
   and disadvantages.
 - No database migration was designed.
-- NO ASC, DESC implemented, even though PageRequest has it. No sorting is implemented at all, but it can be easily added in the future.
+- NO ASC, DESC implemented, even though PageRequest has it. No sorting is implemented at all, but it can be easily added in the
+  future.
