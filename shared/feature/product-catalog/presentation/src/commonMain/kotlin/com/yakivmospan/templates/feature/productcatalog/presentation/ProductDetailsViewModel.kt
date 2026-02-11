@@ -21,8 +21,8 @@ class ProductDetailsViewModel(
     private val navigator: Navigator,
     private val getProductDetailsUseCase: GetProductDetailsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    private val productToViewDataMapper: ProductToDetailsViewDataMapper,
-    private val viewDataToProductMapper: DetailsViewDataToProductMapper
+    private val productToViewDataMapper: ProductToViewDataMapper,
+    private val viewDataToProductMapper: ProductViewDataToEntityMapper
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductDetailsState())

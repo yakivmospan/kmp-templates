@@ -53,6 +53,7 @@ import coil3.compose.AsyncImage
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogEvent
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
 import dev.icerock.moko.resources.compose.stringResource
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -189,7 +190,7 @@ fun ProductCatalogScreen(
 
 @Composable
 private fun ProductList(
-    displayItems: List<com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewData>,
+    displayItems: List<ProductViewData>,
     isSearchMode: Boolean,
     isLoading: Boolean,
     hasNextPage: Boolean,
@@ -317,7 +318,7 @@ private fun SearchBar(
 
 @Composable
 private fun ProductCard(
-    product: com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewData,
+    product: ProductViewData,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {

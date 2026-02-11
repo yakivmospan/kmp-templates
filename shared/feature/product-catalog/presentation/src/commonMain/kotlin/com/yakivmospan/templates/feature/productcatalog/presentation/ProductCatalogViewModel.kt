@@ -29,7 +29,7 @@ class ProductCatalogViewModel(
     private val navigator: Navigator,
     private val getProductsUseCase: GetProductsUseCase,
     private val searchProductsUseCase: SearchProductsUseCase,
-    private val viewDataMapper: ProductCatalogViewDataMapper
+    private val viewDataMapper: ProductToViewDataMapper
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductCatalogState())

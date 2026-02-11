@@ -11,11 +11,10 @@ import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProduc
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
-import com.yakivmospan.templates.feature.productcatalog.presentation.DetailsViewDataToProductMapper
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewDataMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsViewModel
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToDetailsViewDataMapper
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewDataToEntityMapper
 import org.koin.dsl.module
 
 fun productCatalogModules() = listOf(
@@ -49,9 +48,8 @@ val productCatalogDomainModule = module {
 }
 
 val productCatalogPresentationModule = module {
-    single { ProductCatalogViewDataMapper() }
-    single { ProductToDetailsViewDataMapper() }
-    single { DetailsViewDataToProductMapper() }
+    single { ProductToViewDataMapper() }
+    single { ProductViewDataToEntityMapper() }
 
     factory {
         ProductCatalogViewModel(
