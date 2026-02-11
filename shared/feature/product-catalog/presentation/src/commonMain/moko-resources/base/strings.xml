@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <!-- Error Messages -->
+    <string name="pd_catalog_feature_network_error_message">Network error. Please check your connection.</string>
+    <string name="pd_catalog_feature_unauthorized_error_message">Unauthorized. Please log in.</string>
+    <string name="pd_catalog_feature_timeout_error_message">Request timed out. Please try again.</string>
+    <string name="pd_catalog_feature_generic_error_message">An error occurred</string>
+    <string name="pd_catalog_feature_products_not_found_error">Products not found.</string>
+    <string name="pd_catalog_feature_product_not_found_error">Product not found.</string>
+    <string name="pd_catalog_feature_error_code_format"> (Error: %s)</string>
+    <string name="pd_catalog_feature_error_details_format"> - %s</string>
+
+    <!-- Actions -->
+    <string name="pd_catalog_feature_retry_button">Retry</string>
+
+    <!-- Search -->
+    <string name="pd_catalog_feature_search_placeholder">Search products...</string>
+    <string name="pd_catalog_feature_search_icon_description">Search</string>
+    <string name="pd_catalog_feature_clear_search_icon_description">Clear search</string>
+    <string name="pd_catalog_feature_searching_label">Searching...</string>
+
+    <!-- Loading States -->
+    <string name="pd_catalog_feature_loading_products_label">Loading products...</string>
+
+    <!-- Empty States -->
+    <string name="pd_catalog_feature_no_products_title">No products available</string>
+    <string name="pd_catalog_feature_no_products_description">Check back later for new products</string>
+    <string name="pd_catalog_feature_no_search_results_title">No products found for "%s"</string>
+    <string name="pd_catalog_feature_no_search_results_description">Try adjusting your search terms</string>
+
+    <!-- List States -->
+    <string name="pd_catalog_feature_no_more_products_label">No more products</string>
+
+    <!-- Product Details -->
+    <string name="pd_catalog_feature_price_format">$%s</string>
+</resources>

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinxSerialization)
+    alias(libs.plugins.mokoResources)
 }
 
 kotlin {
@@ -35,6 +36,9 @@ kotlin {
             implementation(libs.lifecycle.viewmodel)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.core)
+
+            // moko-resources
+            implementation(libs.moko.resources.core)
         }
     }
 }
@@ -51,4 +55,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+}
+
+multiplatformResources {
+    resourcesPackage.set("com.yakivmospan.templates.feature.productcatalog.presentation")
+    resourcesClassName = "MR"  // Explicitly set the class name
 }

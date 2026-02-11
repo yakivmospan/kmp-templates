@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.mokoResources)
 }
 
 kotlin {
@@ -47,6 +48,10 @@ kotlin {
             // Coil
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+
+            // moko-resources
+            implementation(libs.moko.resources.core)
+            implementation(libs.moko.resources.compose)
         }
 
         commonMain.dependencies {

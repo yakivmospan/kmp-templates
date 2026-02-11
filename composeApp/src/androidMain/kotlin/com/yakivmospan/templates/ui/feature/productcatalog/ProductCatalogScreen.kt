@@ -50,8 +50,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogEvent
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
+import dev.icerock.moko.resources.compose.stringResource
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import org.koin.androidx.compose.koinViewModel
@@ -64,13 +66,14 @@ fun ProductCatalogScreen(
     val state = productCatalogViewModel.state.collectAsStateWithLifecycle()
     val searchQuery = productCatalogViewModel.searchQuery.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
 
     // Handle error display in Snackbar
     LaunchedEffect(state.value.error) {
         state.value.error?.let { errorMessage ->
             val result = snackbarHostState.showSnackbar(
                 message = errorMessage,
-                actionLabel = "Retry",
+                actionLabel = retryButtonLabel,
                 duration = SnackbarDuration.Long
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -126,7 +129,11 @@ fun ProductCatalogScreen(
                     state.value.isLoading && displayItems.isEmpty() -> {
                         LoadingState(
                             modifier = Modifier.align(Alignment.Center),
-                            message = if (isSearchMode) "Searching..." else "Loading products..."
+                            message = if (isSearchMode) {
+                                stringResource(MR.strings.pd_catalog_feature_searching_label)
+                            } else {
+                                stringResource(MR.strings.pd_catalog_feature_loading_products_label)
+                            }
                         )
                     }
 
@@ -252,7 +259,7 @@ private fun ProductList(
         if (!hasNextPage && displayItems.isNotEmpty() && !isLoading && !isSearchMode) {
             item {
                 Text(
-                    text = "No more products",
+                    text = stringResource(MR.strings.pd_catalog_feature_no_more_products_label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -277,11 +284,11 @@ private fun SearchBar(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier,
-        placeholder = { Text("Search products...") },
+        placeholder = { Text(stringResource(MR.strings.pd_catalog_feature_search_placeholder)) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Search,
-                contentDescription = "Search"
+                contentDescription = stringResource(MR.strings.pd_catalog_feature_search_icon_description)
             )
         },
         trailingIcon = {
@@ -297,7 +304,7 @@ private fun SearchBar(
                     IconButton(onClick = onClearClick) {
                         Icon(
                             imageVector = Icons.Filled.Clear,
-                            contentDescription = "Clear search"
+                            contentDescription = stringResource(MR.strings.pd_catalog_feature_clear_search_icon_description)
                         )
                     }
                 }
@@ -363,7 +370,7 @@ private fun ProductCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "$${String.format("%.2f", product.price)}",
+                    text = stringResource(MR.strings.pd_catalog_feature_price_format, String.format("%.2f", product.price)),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -375,7 +382,7 @@ private fun ProductCard(
 @Composable
 private fun LoadingState(
     modifier: Modifier = Modifier,
-    message: String = "Loading products..."
+    message: String
 ) {
     Column(
         modifier = modifier.padding(32.dp),
@@ -406,18 +413,18 @@ private fun EmptyState(
     ) {
         Text(
             text = if (isSearchActive) {
-                "No products found for \"$searchQuery\""
+                stringResource(MR.strings.pd_catalog_feature_no_search_results_title, searchQuery)
             } else {
-                "No products available"
+                stringResource(MR.strings.pd_catalog_feature_no_products_title)
             },
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = if (isSearchActive) {
-                "Try adjusting your search terms"
+                stringResource(MR.strings.pd_catalog_feature_no_search_results_description)
             } else {
-                "Check back later for new products"
+                stringResource(MR.strings.pd_catalog_feature_no_products_description)
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant

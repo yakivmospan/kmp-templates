@@ -9,6 +9,7 @@ import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
+import dev.icerock.moko.resources.format
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -101,13 +102,13 @@ class ProductDetailsViewModel(
 
     // Utils
     private fun mapErrorMessage(exception: Throwable) = when (exception) {
-        is DomainException.NetworkError -> "Network error. Please check your connection."
+        is DomainException.NetworkError -> MR.strings.pd_catalog_feature_network_error_message.toString()
         is DomainException.ServerError -> mapServerErrorMessage(exception)
-        is DomainException.Unauthorized -> "Unauthorized. Please log in."
-        is DomainException.NotFound -> "Product not found."
-        is DomainException.Timeout -> "Request timed out. Please try again."
+        is DomainException.Unauthorized -> MR.strings.pd_catalog_feature_unauthorized_error_message.toString()
+        is DomainException.NotFound -> MR.strings.pd_catalog_feature_product_not_found_error.toString()
+        is DomainException.Timeout -> MR.strings.pd_catalog_feature_timeout_error_message.toString()
         is DomainException.Unknown -> exception.errorMessage
-        else -> exception.message ?: "An error occurred"
+        else -> exception.message ?: MR.strings.pd_catalog_feature_generic_error_message.toString()
     }
 
     private fun mapServerErrorMessage(
@@ -116,11 +117,11 @@ class ProductDetailsViewModel(
         append(exception.errorMessage)
 
         exception.errorCode?.let {
-            append(" (Error: $it)")
+            append(MR.strings.pd_catalog_feature_error_code_format.format(it).toString())
         }
 
         exception.errorDetails?.entries?.firstOrNull()?.let { (_, value) ->
-            append(" - $value")
+            append(MR.strings.pd_catalog_feature_error_details_format.format(value).toString())
         }
     }
 }

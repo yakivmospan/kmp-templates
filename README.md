@@ -63,3 +63,16 @@ Key architectural enforcement:
 - Domain NEVER depends on Data or Presentation
 - Data implements Domain contracts
 - Apps choose which features to include
+
+Technologies used:
+
+- Kotlin Multiplatform for shared code
+- Compose for UI Android
+- SwiftUI for UI iOS
+- Koin for Dependency Injection
+- Coroutines for asynchronous programming
+- Ktor for networking
+- coil for image loading
+- Moko resources for cross-platform resource management
+- *SQLDelight for database*?
+- *MockK for testing* ?
