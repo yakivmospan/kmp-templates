@@ -83,10 +83,11 @@ Technologies used:
 - Added general navigation interface, to be later implemented in iOS
 - ViewModels uses events to communicate with UI, not methods - this make it easier to call them from SwiftUI, less adapter code is
   needed, less error prone.
+- ViewModel flow state can be converted to Publishers manually or by using helper libraries like KMP-NativeCoroutines, SKIE.
 - Created `iosAppFramework` module to setup `Shared` framework for iOS, this is where we can create the Koin module and initialize
   it, so that it can be used in the iOS app. Had not time to setup it further.
 
-## iOS Integration Example:
+## iOS Integration Example (KMP-NativeCoroutines):
 
 ```
 import SwiftUI
