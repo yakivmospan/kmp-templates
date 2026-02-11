@@ -43,8 +43,6 @@ kotlin {
 
         // Test dependencies
         androidUnitTest.dependencies {
-            implementation(projects.shared.core.common)
-
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.mockk)

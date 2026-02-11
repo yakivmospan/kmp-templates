@@ -97,7 +97,7 @@ Technologies used:
 - List state is not preserved when navigating between tabs - this will require to update Navigator and think about iOS handling of
   it.
 - Overall state handling with navigation is not ideal and requires time for improvements.
-- `ViewModelTest` and `TestDispatcherProvider` should be moved to separate common test module
+- `ViewModelTest`, `UseCaseTest` and `TestDispatcherProvider` should be moved to separate common test module
 - Favorite button can be added directly on the list items on Catalog and Favorites screens, but for simplicity it was added only
   on the Details scree.
 - No documentation was added to view models, in real life it would be good to have a solid contract for each view model,
@@ -109,3 +109,4 @@ Technologies used:
 - Database is created per feature. If required can be moved to a core module like we have with network. It has its own advantages
   and disadvantages.
 - No database migration was designed.
+- NO ASC, DESC implemented, even though PageRequest has it. No sorting is implemented at all, but it can be easily added in the future.
