@@ -86,3 +86,5 @@ Technologies used:
   done for simplicity and speed of development.
 - There is no UI Module separation, im not sure if you are doing it in your production app, but for this sample i wanted to keep
   it simple, focusing more on shared architecture and code sharing, rather than on UI modularization.
+- List state is not preserved when navigating between tabs - this will require to update Navigator and think about iOS handling of it.
+- Overall state handling with navigation is not ideal and requires time for improvements.

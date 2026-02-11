@@ -38,4 +38,10 @@
     <string name="pd_catalog_feature_navigate_back_accessibility">Navigate back</string>
     <string name="pd_catalog_feature_add_to_favorites_accessibility">Add to favorites</string>
     <string name="pd_catalog_feature_remove_from_favorites_accessibility">Remove from favorites</string>
+
+    <!-- Favorites -->
+    <string name="pd_catalog_feature_no_favorites_title">No favorites yet</string>
+    <string name="pd_catalog_feature_no_favorites_description">Add products to your favorites to see them here</string>
+    <string name="pd_catalog_feature_favorites_tab_label">Favorites</string>
+    <string name="pd_catalog_feature_catalog_tab_label">Catalog</string>
 </resources>

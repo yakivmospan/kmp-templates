@@ -18,7 +18,7 @@ import com.yakivmospan.templates.core.navigation.NavigatorCommandsFlow
 import com.yakivmospan.templates.core.navigation.NavigatorResultsFlow
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogNavigationRoutes
 import com.yakivmospan.templates.presentation.theme.AppTheme
-import com.yakivmospan.templates.ui.feature.productcatalog.ProductCatalogScreen
+import com.yakivmospan.templates.ui.feature.productcatalog.ProductCatalogHomeScreen
 import com.yakivmospan.templates.ui.feature.productcatalog.ProductDetailsScreen
 import com.yakivmospan.templates.ui.navigation.ComposeNavigatorCommandsHandler
 import org.koin.compose.getKoin
@@ -54,8 +54,10 @@ fun AppNavigation(
     ComposeNavigatorCommandsHandler(navController, navigatorCommands, navigatorResults, onNothingToPop = {/*finish?*/ })
 
     // Destination graph
-    NavHost(navController, startDestination = ProductCatalogNavigationRoutes.ProductCatalog) {
-        composable<ProductCatalogNavigationRoutes.ProductCatalog> { (ProductCatalogScreen(innerPadding)) }
+    NavHost(navController, startDestination = ProductCatalogNavigationRoutes.ProductCatalogHome) {
+        composable<ProductCatalogNavigationRoutes.ProductCatalogHome> {
+            ProductCatalogHomeScreen(innerPadding)
+        }
 
         composable<ProductCatalogNavigationRoutes.ProductDetails> { backStackEntry ->
             val route = backStackEntry.toRoute<ProductCatalogNavigationRoutes.ProductDetails>()
@@ -66,4 +68,3 @@ fun AppNavigation(
         }
     }
 }
-

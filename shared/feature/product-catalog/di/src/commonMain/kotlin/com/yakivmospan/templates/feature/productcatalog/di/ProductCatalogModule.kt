@@ -9,10 +9,13 @@ import com.yakivmospan.templates.feature.productcatalog.data.repository.ProductR
 import com.yakivmospan.templates.feature.productcatalog.domain.repository.ProductRepository
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductsUseCase
+import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogHomeViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewDataToEntityMapper
 import org.koin.dsl.module
@@ -45,11 +48,14 @@ val productCatalogDomainModule = module {
     factory { SearchProductsUseCase(repository = get()) }
     factory { GetProductDetailsUseCase(repository = get()) }
     factory { ToggleFavoriteUseCase(repository = get()) }
+    factory { ObserveFavoritesUseCase(repository = get()) }
 }
 
 val productCatalogPresentationModule = module {
     single { ProductToViewDataMapper() }
     single { ProductViewDataToEntityMapper() }
+
+    factory { ProductCatalogHomeViewModel() }
 
     factory {
         ProductCatalogViewModel(
@@ -68,6 +74,14 @@ val productCatalogPresentationModule = module {
             toggleFavoriteUseCase = get(),
             productToViewDataMapper = get(),
             viewDataToProductMapper = get()
+        )
+    }
+
+    factory {
+        ProductFavoritesViewModel(
+            navigator = get(),
+            observeFavoritesUseCase = get(),
+            viewDataMapper = get()
         )
     }
 }
