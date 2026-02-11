@@ -10,7 +10,7 @@ This is a Kotlin Multiplatform project targeting Android, iOS.
 
 * [/iosAppFramework](./iosAppFramework) module that is designed to setup `Shared` static library dependencies for `iosApp`.
 
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
+* [/shared](./shared) is for the code that will be shared between all targets in the project.
 
 ### Build and Run Android Application
 
