@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,6 +53,7 @@ class ProductCatalogViewModel(
             is ProductCatalogEvent.SearchProducts -> onSearchEvent(event)
             is ProductCatalogEvent.ClearSearch -> onClearSearchEvent()
             is ProductCatalogEvent.Retry -> onRetryEvent()
+            is ProductCatalogEvent.ClearError -> onClearErrorEvent()
         }
     }
 
@@ -156,6 +158,7 @@ class ProductCatalogViewModel(
     // Search
     private fun observeSearchQuery() = viewModelScope.launch {
         _searchQuery
+            .drop(1)
             // Show loading before debounce to provide immediate feedback
             .onEach { _state.update { it.copy(isSearching = true) } }
             .debounce(SEARCH_DEBOUNCE_MS)
@@ -188,6 +191,10 @@ class ProductCatalogViewModel(
 
 
     // Other Events
+    private fun onClearErrorEvent() {
+        _state.update { it.copy(error = null) }
+    }
+
     private fun onRetryEvent() {
         _state.update { it.copy(error = null) }
 

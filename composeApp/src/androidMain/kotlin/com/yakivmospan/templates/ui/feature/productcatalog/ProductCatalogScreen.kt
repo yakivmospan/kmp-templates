@@ -5,14 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -60,6 +57,9 @@ fun ProductCatalogScreen(
                 actionLabel = retryButtonLabel,
                 duration = SnackbarDuration.Long
             )
+
+            productCatalogViewModel.onEvent(ProductCatalogEvent.ClearError)
+
             if (result == SnackbarResult.ActionPerformed) {
                 productCatalogViewModel.onEvent(ProductCatalogEvent.Retry)
             }
@@ -74,7 +74,6 @@ fun ProductCatalogScreen(
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
-                .safeContentPadding()
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -96,7 +95,7 @@ fun ProductCatalogScreen(
             val isSearchMode = searchQuery.value.isNotBlank()
 
             // Determine which items to display
-            val displayItems = if (isSearchMode && state.value.isSearching) {
+            val displayItems = if (isSearchMode) {
                 state.value.searchResult
             } else {
                 state.value.products
@@ -151,20 +150,18 @@ fun ProductCatalogScreen(
             }
         }
 
-        // Snackbar Host - positioned above keyboard with proper insets
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .windowInsetsPadding(WindowInsets.ime)
-                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+                .padding(horizontal = 16.dp)
+                .imePadding(),
             snackbar = { snackbarData ->
                 Snackbar(
                     snackbarData = snackbarData,
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    actionColor = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    actionColor = MaterialTheme.colorScheme.error
                 )
             }
         )

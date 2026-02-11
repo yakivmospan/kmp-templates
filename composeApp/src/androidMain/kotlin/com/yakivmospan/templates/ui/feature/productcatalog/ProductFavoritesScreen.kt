@@ -58,6 +58,9 @@ fun ProductFavoritesScreen(
                 actionLabel = retryButtonLabel,
                 duration = SnackbarDuration.Long
             )
+
+            viewModel.onEvent(ProductFavoritesEvent.ClearError)
+
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.onEvent(ProductFavoritesEvent.Retry)
             }

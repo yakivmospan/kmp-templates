@@ -165,3 +165,4 @@ private let viewModel: ProductCatalogViewModel
 - No database migration was designed.
 - NO ASC, DESC implemented, even though PageRequest has it. No sorting is implemented at all, but it can be easily added in the
   future.
+- Simple clear error was used to clean up errors, would be better to have error flow like with search query.

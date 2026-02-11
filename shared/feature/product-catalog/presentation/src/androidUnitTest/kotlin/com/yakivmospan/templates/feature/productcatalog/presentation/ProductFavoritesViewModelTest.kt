@@ -407,4 +407,69 @@ class ProductFavoritesViewModelTest : ViewModelTest() {
         assertEquals("phone", viewModel.searchQuery.value)
         assertEquals(2, filteredResults.size) // Smartphone and Headphones match "phone"
     }
+
+    // Step 12: Clear Error Event
+    @Test
+    fun `clear error should reset error state`() = runTest {
+        // Given - Initial error state
+        val errorMessage = "Network error"
+        every { observeFavoritesUseCase() } returns flow {
+            throw Exception(errorMessage)
+        }
+        val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Verify error is set
+        assertEquals(errorMessage, viewModel.state.value.error)
+
+        // When - Clear error event
+        viewModel.onEvent(ProductFavoritesEvent.ClearError)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then - Error should be null, other state remains unchanged
+        val expectedState = ProductFavoritesState(
+            favorites = emptyList(),
+            searchResult = emptyList(),
+            isLoading = false,
+            isSearching = false,
+            error = null
+        )
+        assertEquals(expectedState, viewModel.state.value)
+    }
+
+    // Step 13: Search observes .drop(1) correctly
+    @Test
+    fun `initial search query should be ignored not trigger search`() = runTest {
+        // Given - Observe favorites normally
+        val products = ProductTestFixtures.sampleProducts
+        every { observeFavoritesUseCase() } returns flowOf(products)
+        val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Initial _searchQuery is "", .drop(1) should ignore it, so isSearching should remain false
+        assertEquals(false, viewModel.state.value.isSearching)
+
+        // When - Update query
+        viewModel.onEvent(ProductFavoritesEvent.SearchFavorites("laptop"))
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(true, viewModel.state.value.isSearching) // Immediately true
+
+        // Advance debounce
+        testDispatcher.scheduler.advanceTimeBy(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then - search should complete
+        val filteredResults = products.map { viewDataMapper.map(it) }.filter {
+            it.title.lowercase().contains("laptop") || it.description.lowercase().contains("laptop")
+        }
+        val expectedState = ProductFavoritesState(
+            favorites = products.map { viewDataMapper.map(it) },
+            searchResult = filteredResults,
+            isLoading = false,
+            isSearching = false,
+            error = null
+        )
+        assertEquals(expectedState, viewModel.state.value)
+        assertEquals("laptop", viewModel.searchQuery.value)
+    }
 }

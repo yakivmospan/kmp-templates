@@ -5,4 +5,5 @@ sealed class ProductDetailsEvent {
     data object NavigateBack : ProductDetailsEvent()
     data object Retry : ProductDetailsEvent()
     data object ToggleFavorite : ProductDetailsEvent()
+    object ClearError : ProductDetailsEvent()
 }

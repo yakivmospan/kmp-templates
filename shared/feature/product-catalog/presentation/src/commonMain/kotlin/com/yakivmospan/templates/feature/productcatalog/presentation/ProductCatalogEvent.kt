@@ -7,4 +7,5 @@ sealed class ProductCatalogEvent {
     data class SearchProducts(val query: String) : ProductCatalogEvent()
     data object ClearSearch : ProductCatalogEvent()
     data object Retry : ProductCatalogEvent()
+    object ClearError : ProductCatalogEvent()
 }

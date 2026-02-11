@@ -6,6 +6,7 @@ import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,6 +34,7 @@ class ProductFavoritesViewModel(
 
     // Store all favorites for filtering
     private var allFavorites: List<ProductViewData> = emptyList()
+    private var observeFavoritesJob: Job? = null
 
     init {
         observeFavorites()
@@ -44,14 +47,18 @@ class ProductFavoritesViewModel(
             is ProductFavoritesEvent.Retry -> observeFavorites()
             is ProductFavoritesEvent.SearchFavorites -> onSearchEvent(event.query)
             is ProductFavoritesEvent.ClearSearch -> onClearSearchEvent()
+            is ProductFavoritesEvent.ClearError -> onClearErrorEvent()
         }
     }
 
-    private fun observeFavorites() = viewModelScope.launch {
-        _state.update { it.copy(isLoading = true, error = null) }
-        observeFavoritesUseCase()
-            .catch { onFavoritesLoadError(it) }
-            .collect { onFavoritesChanged(it) }
+    private fun observeFavorites() {
+        observeFavoritesJob?.cancel()
+        observeFavoritesJob = viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            observeFavoritesUseCase()
+                .catch { onFavoritesLoadError(it) }
+                .collect { onFavoritesChanged(it) }
+        }
     }
 
     private fun onFavoritesChanged(favoriteProducts: List<Product>) {
@@ -80,9 +87,14 @@ class ProductFavoritesViewModel(
         }
     }
 
+    private fun onClearErrorEvent() {
+        _state.update { it.copy(error = null) }
+    }
+
     // Search functionality
     private fun observeSearchQuery() = viewModelScope.launch {
         _searchQuery
+            .drop(1)
             // Show loading before debounce to provide immediate feedback
             .onEach { _state.update { it.copy(isSearching = true) } }
             .debounce(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)

@@ -38,6 +38,7 @@ class ProductDetailsViewModel(
             is ProductDetailsEvent.ToggleFavorite -> onToggleFavoriteEvent()
             is ProductDetailsEvent.NavigateBack -> onNavigateBackEvent()
             is ProductDetailsEvent.Retry -> onRetryEvent()
+            is ProductDetailsEvent.ClearError -> onClearErrorEvent()
         }
     }
 
@@ -95,6 +96,10 @@ class ProductDetailsViewModel(
     }
 
     // Retry
+    private fun onClearErrorEvent() {
+        _state.update { it.copy(error = null) }
+    }
+
     private fun onRetryEvent() {
         _state.update { it.copy(error = null) }
         loadProduct()
