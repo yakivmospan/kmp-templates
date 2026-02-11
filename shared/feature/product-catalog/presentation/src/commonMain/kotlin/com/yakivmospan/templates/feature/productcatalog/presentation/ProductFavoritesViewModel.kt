@@ -58,12 +58,7 @@ class ProductFavoritesViewModel(
             viewDataMapper.map(product)
         }
 
-        // Apply current search filter if active
-        val filteredFavorites = if (_searchQuery.value.isBlank()) {
-            allFavorites
-        } else {
-            filterFavorites(_searchQuery.value)
-        }
+        val filteredFavorites = filterFavorites(_searchQuery.value)
 
         _state.update {
             it.copy(
@@ -90,11 +85,7 @@ class ProductFavoritesViewModel(
             .debounce(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
             .distinctUntilChanged()
             .collectLatest { query ->
-                if (query.isBlank()) {
-                    clearSearchResults()
-                } else {
-                    performSearch(query)
-                }
+                performSearch(query)
             }
     }
 
@@ -120,19 +111,12 @@ class ProductFavoritesViewModel(
     }
 
     private fun filterFavorites(query: String): List<ProductViewData> {
+        if (query.isBlank()) return emptyList()
+
         val lowercaseQuery = query.lowercase()
         return allFavorites.filter { product ->
             product.title.lowercase().contains(lowercaseQuery) ||
                     product.description.lowercase().contains(lowercaseQuery)
-        }
-    }
-
-    private fun clearSearchResults() {
-        _state.update {
-            it.copy(
-                searchResult = emptyList(),
-                isSearching = false
-            )
         }
     }
 

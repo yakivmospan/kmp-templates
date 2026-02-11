@@ -30,9 +30,9 @@ class ProductToViewDataMapper : Mapper<Product, ProductViewData> {
     // Had no time to search for alternatives or write better ebullition.
     // In real project this should consider locale and currency, but for demo purposes this is enough.
     private fun formatPrice(price: Double): String {
-        val rounded = (price * 100).toInt() / 100.0
-        val parts = rounded.toString().split(".")
-        val decimals = parts.getOrElse(1) { "0" }.padEnd(2, '0')
+        val rounded = price.toString()
+        val parts = rounded.split(".")
+        val decimals = parts.getOrElse(1) { "0" }.take(2).padEnd(2, '0')
         return "$${parts[0]}.$decimals"
     }
 }

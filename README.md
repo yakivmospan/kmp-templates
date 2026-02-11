@@ -88,3 +88,4 @@ Technologies used:
   it simple, focusing more on shared architecture and code sharing, rather than on UI modularization.
 - List state is not preserved when navigating between tabs - this will require to update Navigator and think about iOS handling of it.
 - Overall state handling with navigation is not ideal and requires time for improvements.
+- `ViewModelTest` and `TestDispatcherProvider` should be moved to separate common test module 
