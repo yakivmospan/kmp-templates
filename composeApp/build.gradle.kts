@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.mokoResources)
 }
 
@@ -25,14 +24,16 @@ kotlin {
             implementation(projects.shared.feature.productCatalog.presentation)
             implementation(projects.shared.feature.productCatalog.di)
 
-            // Compose
-            implementation(libs.compose.ui)
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.material3)
+            // AndroidX Compose BOM
+            implementation(project.dependencies.platform(libs.androidx.compose.bom))
+            implementation(libs.androidx.compose.ui)
+            implementation(libs.androidx.compose.ui.tooling.preview)
+            implementation(libs.androidx.compose.material3)
+            implementation(libs.androidx.compose.foundation)
+            implementation(libs.androidx.compose.runtime)
+
+            // Activity Compose
             implementation(libs.androidx.activity.compose)
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.components.resources)
 
             // Koin
             implementation(libs.koin.android)
@@ -44,6 +45,8 @@ kotlin {
             implementation(libs.androidx.navigation.runtime.ktx)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.compose.material.icons.extended)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
 
             // Coil
             implementation(libs.coil.compose)
@@ -52,11 +55,6 @@ kotlin {
             // moko-resources
             implementation(libs.moko.resources.core)
             implementation(libs.moko.resources.compose)
-        }
-
-        commonMain.dependencies {
-            // Common dependencies if needed
-            implementation(libs.compose.components.resources)
         }
     }
 }

@@ -33,4 +33,9 @@
 
     <!-- Product Details -->
     <string name="pd_catalog_feature_price_format">$%s</string>
+
+    <!-- Accessibility - Product Details -->
+    <string name="pd_catalog_feature_navigate_back_accessibility">Navigate back</string>
+    <string name="pd_catalog_feature_add_to_favorites_accessibility">Add to favorites</string>
+    <string name="pd_catalog_feature_remove_from_favorites_accessibility">Remove from favorites</string>
 </resources>

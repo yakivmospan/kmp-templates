@@ -371,7 +371,7 @@ private fun ProductCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = stringResource(MR.strings.pd_catalog_feature_price_format, String.format("%.2f", product.price)),
+                    text = stringResource(MR.strings.pd_catalog_feature_price_format, product.formattedPrice),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
