@@ -75,70 +75,17 @@ Technologies used:
 - SQLDelight for database
 - MockK and kotlin test for unit testing
 
-## iOS Considerations
+## iOS Implementation Notes
 
-- Koin allows easily create specific iOS modules if needed.
-- Used Moko to share resources between both platforms (it is v0.26.0.. maybe for prod we would add our own interface and
-  implementations.)
-- Added general navigation interface, to be later implemented in iOS
+- Created `iosAppFramework` module to setup `Shared` framework for iOS, this is where we create the Koin module and initialize
+  it, so that it can be used in the iOS app.
+- `KoinInitializer` used to initialize koin dependency graph. `KoinHelper` used to get `ViewModels` (or other dependencies) from koin graph.
+- Moko resources are used to share and access string resources on both platforms (it is v0.26.0.. but skie is 0.10.0..)
+- There is general navigation interface, that need to be later implemented on iOS.
 - ViewModels uses events to communicate with UI, not methods - this make it easier to call them from SwiftUI, less adapter code is
-  needed, less error prone.
-- ViewModel flow state can be converted to Publishers manually or by using helper libraries like KMP-NativeCoroutines, SKIE.
-- Created `iosAppFramework` module to setup `Shared` framework for iOS, this is where we can create the Koin module and initialize
-  it, so that it can be used in the iOS app. Had not time to setup it further.
-
-## iOS Integration Example (KMP-NativeCoroutines):
-
-```
-import SwiftUI
-import Shared
-
-struct ProductCatalogView: View {
-@StateObject private var observableState: ObservableProductCatalogState
-
-    var body: some View {
-        VStack {
-            TextField("Search", text: $observableState.searchQuery)
-            
-            if observableState.state.isSearching {
-                ProgressView()
-            }
-            
-            List(observableState.state.products, id: \.id) { product in
-                Text(product.title)
-            }
-        }
-    }
-}
-
-// Helper to bridge Flow to SwiftUI
-@MainActor
-class ObservableProductCatalogState: ObservableObject {
-private let viewModel: ProductCatalogViewModel
-
-    @Published var state: ProductCatalogState
-    @Published var searchQuery: String = ""
-    
-    init(viewModel: ProductCatalogViewModel) {
-        self.viewModel = viewModel
-        self.state = viewModel.state.value
-        
-        // Observe state
-        viewModel.state.watch { [weak self] newState in
-            self?.state = newState
-        }
-        
-        // Observe search query
-        viewModel.searchQuery.watch { [weak self] query in
-            self?.searchQuery = query
-        }
-    }
-    
-    func send(_ event: ProductCatalogEvent) {
-        viewModel.onEvent(event: event)
-    }
-}
-```
+  needed, less error prone. Added general base `ObservableViewModel` to work with this approach.
+- ViewModel flow state is converted with SKIE.
+- Added simple `ProductCatalogView` to show how to use ViewModel from SwiftUI.
 
 # Trade-offs
 
