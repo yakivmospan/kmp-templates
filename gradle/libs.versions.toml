@@ -34,6 +34,8 @@ moko-resources = "0.26.0"
 # SQLDelight
 sqldelight = "2.2.1"
 
+skie = "0.10.10"
+
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
@@ -122,3 +124,5 @@ mokoResources = { id = "dev.icerock.mobile.multiplatform-resources", version.ref
 
 # SQLDelight plugin
 sqlDelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+
+skie = { id = "co.touchlab.skie", version.ref = "skie" }

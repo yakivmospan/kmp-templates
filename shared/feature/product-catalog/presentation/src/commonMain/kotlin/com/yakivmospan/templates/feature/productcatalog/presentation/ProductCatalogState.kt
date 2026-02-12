@@ -1,7 +1,5 @@
 package com.yakivmospan.templates.feature.productcatalog.presentation
 
-import dev.icerock.moko.resources.desc.StringDesc
-
 data class ProductCatalogState(
     val searchResult: List<ProductViewData> = emptyList(),
     val products: List<ProductViewData> = emptyList(),

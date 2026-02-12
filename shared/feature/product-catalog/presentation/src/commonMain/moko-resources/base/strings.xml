@@ -9,9 +9,11 @@
     <string name="pd_catalog_feature_product_not_found_error">Product not found.</string>
     <string name="pd_catalog_feature_error_code_format"> (Error: %s)</string>
     <string name="pd_catalog_feature_error_details_format"> - %s</string>
+    <string name="pd_catalog_feature_error_title">Error</string>
 
     <!-- Actions -->
     <string name="pd_catalog_feature_retry_button">Retry</string>
+    <string name="pd_catalog_feature_cancel">Cancel</string>
 
     <!-- Search -->
     <string name="pd_catalog_feature_search_placeholder">Search products...</string>
@@ -30,6 +32,9 @@
 
     <!-- List States -->
     <string name="pd_catalog_feature_no_more_products_label">No more products</string>
+
+    <!-- Product Catalog -->
+    <string name="pd_catalog_feature_title">Products</string>
 
     <!-- Product Details -->
     <string name="pd_catalog_feature_price_format">$%s</string>
