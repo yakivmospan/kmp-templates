@@ -40,6 +40,9 @@ kotlin {
             // SQLDelight
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
+
+            // Logging
+            implementation(libs.kermit)
         }
 
         androidMain.dependencies {

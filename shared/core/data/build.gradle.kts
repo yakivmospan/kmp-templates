@@ -28,6 +28,13 @@ kotlin {
             implementation(projects.shared.core.common)
             implementation(projects.shared.core.domain)
             implementation(projects.shared.core.network)
+
+            implementation(libs.kotlinx.coroutines.core)
+        }
+
+        androidUnitTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }

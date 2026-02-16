@@ -23,8 +23,9 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,8 +37,6 @@ import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCata
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
 import dev.icerock.moko.resources.compose.stringResource
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -178,29 +177,22 @@ private fun ProductList(
 ) {
     val listState = rememberLazyListState()
 
+
     // Infinite scroll using snapshotFlow - more reliable than derivedStateOf
     // for parameters that change outside of composition
-    LaunchedEffect(listState, isSearchMode, isLoading, hasNextPage) {
-        snapshotFlow {
+    val isNearBottom by remember(listState) {
+        derivedStateOf {
             val layoutInfo = listState.layoutInfo
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
             val totalItems = layoutInfo.totalItemsCount
-
-            // Create a tuple of the conditions we care about
-            Triple(
-                lastVisibleItem?.index ?: -1,
-                totalItems,
-                lastVisibleItem != null && lastVisibleItem.index >= totalItems - 2
-            )
+            lastVisibleItem != null && lastVisibleItem.index >= totalItems - 2
         }
-            .distinctUntilChanged()
-            .filter { (_, _, isNearBottom) -> isNearBottom }
-            .collect {
-                // Check all conditions before triggering
-                if (!isSearchMode && hasNextPage && !isLoading) {
-                    onLoadNextPage()
-                }
-            }
+    }
+
+    LaunchedEffect(isNearBottom, isSearchMode, isLoading, hasNextPage) {
+        if (isNearBottom && !isSearchMode && hasNextPage && !isLoading) {
+            onLoadNextPage()
+        }
     }
 
     LazyColumn(

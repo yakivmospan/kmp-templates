@@ -1,6 +1,8 @@
 package com.yakivmospan.templates.core.di
 
+import com.yakivmospan.templates.core.common.CoroutineScopeProvider
 import com.yakivmospan.templates.core.common.DispatcherProvider
+import com.yakivmospan.templates.core.common.defaultCoroutineScopeProvider
 import com.yakivmospan.templates.core.common.defaultDispatcherProvider
 import com.yakivmospan.templates.core.navigation.FlowNavigator
 import com.yakivmospan.templates.core.navigation.Navigator
@@ -24,4 +26,5 @@ val coreNavigationModule = module {
 val coreServicesModule = module {
     single { defaultHttpClientFactoryProvider().create() }
     single<DispatcherProvider> { defaultDispatcherProvider() }
+    single<CoroutineScopeProvider> { defaultCoroutineScopeProvider(dispatchers = get()) }
 }

@@ -61,7 +61,8 @@ val productCatalogDataModule = module {
             paginatedProductsMapper = get(),
             favoriteProductEntityMapper = get(),
             exceptionMapper = get(),
-            dispatchers = get()
+            dispatchers = get(),
+            scopes = get()
         )
     }
 }
