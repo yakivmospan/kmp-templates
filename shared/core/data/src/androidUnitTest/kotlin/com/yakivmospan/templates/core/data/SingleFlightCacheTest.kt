@@ -332,9 +332,9 @@ class SingleFlightCacheTest {
         assertEquals(1, callCount)     // still 1 — served from cache
     }
 
-// -------------------------------------------------------------------------
-// 12. Different keys invoke worker independently and return different results
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 12. Different keys invoke worker independently and return different results
+    // -------------------------------------------------------------------------
 
     @Test
     fun `get - different keys invoke worker independently and return different results`() = testScope.runTest {
@@ -369,9 +369,9 @@ class SingleFlightCacheTest {
         assertEquals(3, callCount)
     }
 
-// -------------------------------------------------------------------------
-// 13. Cancelling caller of one key does not affect in-flight worker of another key
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // 13. Cancelling caller of one key does not affect in-flight worker of another key
+    // -------------------------------------------------------------------------
 
     @Test
     fun `get - cancelling caller of one key does not affect worker of another key`() = testScope.runTest {
@@ -427,4 +427,277 @@ class SingleFlightCacheTest {
         assertEquals(10, secondA)
         assertEquals(1, callCountA)  // still 1 — served from cache, not re-fetched
     }
+
+    // -------------------------------------------------------------------------
+    // 14. Race condition — caller arrives after worker completes but before
+    //     map promotion: must not launch a second worker
+    //
+    //     Timeline:
+    //       t=0   worker starts, registered in inFlight
+    //       t=500 worker finishes, result written to cache, emit fires
+    //       t=500 new caller calls getOrPut — must find entry in cache, not launch again
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - caller arriving exactly as worker completes receives cached result without re-invoking worker`() =
+        testScope.runTest {
+            // Given
+            var callCount = 0
+            val cache = SingleFlightCache<String, Int>(
+                scope = backgroundScope,
+                worker = { _ ->
+                    delay(500)
+                    callCount++
+                    42
+                },
+                keepFor = 1000.milliseconds,
+                timeSource = fakeTimeSource
+            )
+
+            // When — first caller triggers the worker
+            val d1 = async { cache.get("key") }
+            advanceTimeBy(500)   // worker completes, map promotion happens
+            advanceUntilIdle()   // emit delivered to d1
+
+            // Second caller arrives right after completion
+            val d2 = async { cache.get("key") }
+            advanceUntilIdle()
+
+            // Then — both callers get the same value, worker ran only once
+            assertEquals(42, d1.await())
+            assertEquals(42, d2.await())
+            assertEquals(1, callCount)
+        }
+
+    // -------------------------------------------------------------------------
+    // 15. Race condition — two callers arrive simultaneously at TTL boundary:
+    //     exactly one new worker must be launched, not two
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - two callers at TTL expiry boundary launch exactly one new worker`() =
+        testScope.runTest {
+            // Given
+            var callCount = 0
+            val cache = SingleFlightCache<String, Int>(
+                scope = backgroundScope,
+                worker = { _ ->
+                    callCount++
+                    callCount
+                },
+                keepFor = 1000.milliseconds,
+                timeSource = fakeTimeSource
+            )
+
+            // Prime the cache
+            cache.get("key")
+            advanceUntilIdle()
+            assertEquals(1, callCount)
+
+            // Advance past TTL so the next getOrPut evicts the entry
+            fakeTimeSource.advanceBy(1500)
+
+            // Two callers arrive simultaneously after expiry — both call getOrPut
+            // under the same mutex turn, so only one worker must be launched
+            val d1 = async { cache.get("key") }
+            val d2 = async { cache.get("key") }
+            advanceUntilIdle()
+
+            // Then
+            assertEquals(2, d1.await())
+            assertEquals(2, d2.await())
+            assertEquals(2, callCount) // worker ran once more, not twice
+        }
+
+    // -------------------------------------------------------------------------
+    // 16. Race condition — failed worker clears inFlight before emitting,
+    //     so a new caller arriving after the failure launches a fresh worker
+    //     rather than subscribing to the dead flow
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - new caller after worker failure gets a fresh worker not the failed flow`() =
+        testScope.runTest {
+            // Given
+            var callCount = 0
+            val cache = SingleFlightCache<String, Int>(
+                scope = backgroundScope,
+                worker = { _ ->
+                    callCount++
+                    if (callCount == 1) throw RuntimeException("first attempt failed")
+                    99
+                }
+            )
+
+            // When — first call fails
+            assertFailsWith<RuntimeException> { cache.get("key") }
+            advanceUntilIdle()
+
+            // Second call must trigger a fresh worker, not replay the failure
+            val result = cache.get("key")
+            advanceUntilIdle()
+
+            // Then
+            assertEquals(99, result)
+            assertEquals(2, callCount)
+        }
+
+    // -------------------------------------------------------------------------
+    // 17. Race condition — concurrent callers all receive the failure when
+    //     the shared worker throws; none of them silently drops the exception
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - concurrent callers all receive exception when shared worker throws`() =
+        testScope.runTest {
+            // Given
+            var callCount = 0
+            val cache = SingleFlightCache<String, Int>(
+                scope = backgroundScope,
+                worker = { _ ->
+                    delay(200)
+                    callCount++
+                    throw RuntimeException("boom")
+                }
+            )
+
+            // When — three callers join the same in-flight worker
+            val d1 = async { runCatching { cache.get("key") } }
+            val d2 = async { runCatching { cache.get("key") } }
+            val d3 = async { runCatching { cache.get("key") } }
+            advanceUntilIdle()
+
+            // Then — every caller received the failure, worker ran only once
+            assertEquals(true, d1.await().isFailure)
+            assertEquals(true, d2.await().isFailure)
+            assertEquals(true, d3.await().isFailure)
+            assertEquals(1, callCount)
+        }
+
+    // -------------------------------------------------------------------------
+    // 18a. Deadlock probe — calling get() for a *different* key from inside
+    //      the worker must not deadlock: each key has its own inFlight entry
+    //      and its own mutex turn, so there is no cycle.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - calling get for a different key from inside the worker does not deadlock`() =
+        testScope.runTest {
+            // Given
+            var innerResult = -1
+            lateinit var cache: SingleFlightCache<String, Int>
+            cache = SingleFlightCache(
+                scope = backgroundScope,
+                worker = { key ->
+                    if (key == "outer") {
+                        innerResult = cache.get("inner")
+                        10
+                    } else {
+                        20
+                    }
+                }
+            )
+
+            // When
+            val outer = cache.get("outer")
+            advanceUntilIdle()
+
+            // Then
+            assertEquals(10, outer)
+            assertEquals(20, innerResult)
+        }
+
+    // -------------------------------------------------------------------------
+    // 18b. Deadlock documentation — calling get() for the *same* key from
+    //      inside the worker creates a cycle: the worker suspends waiting on
+    //      the sharedFlow that it itself must emit into, so it never makes
+    //      progress. The cache does not detect this. The test asserts the call
+    //      never completes within the test time budget, confirming the hang.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - calling get for the same key from inside the worker deadlocks`() =
+        testScope.runTest {
+            // Given
+            lateinit var cache: SingleFlightCache<String, Int>
+            cache = SingleFlightCache(
+                scope = backgroundScope,
+                worker = { _ ->
+                    cache.get("key") // waits for itself — never completes
+                    42
+                }
+            )
+
+            // When — the job must never finish
+            val job = launch { cache.get("key") }
+            advanceUntilIdle()
+
+            // Then — still running, not completed
+            assertEquals(true, job.isActive)
+
+            // Cleanup
+            job.cancel()
+        }
+
+    // -------------------------------------------------------------------------
+    // 19. Deadlock probe — emit outside lock: multiple concurrent subscribers
+    //     calling get() while the worker is finishing must all unblock cleanly
+    //     (if emit were called inside the mutex this test would deadlock)
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - many concurrent subscribers all unblock when worker completes`() =
+        testScope.runTest {
+            // Given — slow worker so all subscribers are waiting when it finishes
+            val subscriberCount = 20
+            val cache = SingleFlightCache<String, Int>(
+                scope = backgroundScope,
+                worker = { _ ->
+                    delay(300)
+                    7
+                },
+                keepFor = 1000.milliseconds,
+                timeSource = fakeTimeSource
+            )
+
+            // When — flood with concurrent callers
+            val deferred = List(subscriberCount) { async { cache.get("key") } }
+            advanceUntilIdle()
+
+            // Then — every subscriber received the value and none are stuck
+            val results = deferred.map { it.await() }
+            assertEquals(subscriberCount, results.size)
+            assertEquals(true, results.all { it == 7 })
+        }
+
+    // -------------------------------------------------------------------------
+    // 20. Deadlock probe — a subscriber calling get() again (for the same key,
+    //     from a *different* coroutine) immediately after receiving a cached
+    //     result must not deadlock waiting for the mutex
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `get - repeated gets on cached entry from rapid successive coroutines do not deadlock`() =
+        testScope.runTest {
+            // Given
+            var callCount = 0
+            val cache = SingleFlightCache<String, Int>(
+                scope = backgroundScope,
+                worker = { _ -> callCount++; 3 },
+                keepFor = 1000.milliseconds,
+                timeSource = fakeTimeSource
+            )
+
+            // Prime the cache
+            cache.get("key")
+            advanceUntilIdle()
+
+            // When — fire many gets against the cached entry in rapid succession
+            val deferred = List(50) { async { cache.get("key") } }
+            advanceUntilIdle()
+
+            // Then — all return the cached value, worker still ran only once
+            assertEquals(true, deferred.map { it.await() }.all { it == 3 })
+            assertEquals(1, callCount)
+        }
 }

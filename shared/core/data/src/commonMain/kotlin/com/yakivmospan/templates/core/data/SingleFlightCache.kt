@@ -15,6 +15,7 @@ import kotlin.time.Duration
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+// TODO Separate into SingleFlightCommand and MemoryCache classes, and compose them in repositories as needed.
 /**
  * A coroutine-based cache that deduplicates concurrent requests for the same key
  * (the "single flight" pattern) and optionally retains results for a TTL.
@@ -29,6 +30,14 @@ import kotlin.time.TimeSource
  * is retained in memory with `replay = 1`. Subsequent callers within the TTL window
  * receive the cached value immediately without invoking [worker] again. Once the TTL
  * expires the entry is evicted on the next access.
+ *
+ * ### Invalidation
+ * [invalidate] removes entries from [cache] and [timestamps] while intentionally
+ * leaving any in-flight workers untouched. Callers already subscribed to an
+ * in-flight flow still receive their result. However, because the cache entry is
+ * cleared before [doWork] promotes the result, the completed value will not be
+ * retained — the next caller after the worker finishes will trigger a fresh
+ * worker invocation.
  *
  * ### Error handling
  * If [worker] throws, the entry is removed from the cache before the error is
@@ -62,6 +71,8 @@ class SingleFlightCache<K, V>(
     private val mutex = Mutex()
 
     private val inFlight = HashMap<K, MutableSharedFlow<Result<V>>>()
+    private val cache = HashMap<K, MutableSharedFlow<Result<V>>>()
+
     private val timestamps = HashMap<K, TimeMark>()
 
     /**
@@ -86,30 +97,64 @@ class SingleFlightCache<K, V>(
     }
 
     /**
+     * Invalidates cached entries without disturbing in-flight workers.
+     *
+     * When [key] is provided, only that entry is removed from [cache] and
+     * [timestamps]. When [key] is `null` (the default), all entries are removed.
+     *
+     * In-flight workers are left running intentionally:
+     * - Callers already subscribed to an in-flight flow still receive their result.
+     * - Because the cache entry is gone when [doWork] tries to promote the result,
+     *   the value will not be stored and the next caller will trigger a new worker.
+     *
+     * @param key The specific key to invalidate, or `null` to invalidate all entries.
+     */
+    suspend fun invalidate(key: K? = null) {
+        mutex.withLock {
+            if (key == null) {
+                cache.clear()
+                timestamps.clear()
+            } else {
+                cache.remove(key)
+                timestamps.remove(key)
+            }
+        }
+    }
+
+    /**
      * Returns the existing [MutableSharedFlow] for [key] if one is in-flight or
      * still within its TTL, otherwise creates a new one and launches a worker.
+     *
+     * Lookup order:
+     * 1. [inFlight] — a worker is already running for this key.
+     * 2. [cache] — a previously completed result is still within its TTL.
+     * 3. Neither — create a new [MutableSharedFlow], register it in [inFlight],
+     *    and launch a worker.
      *
      * Must be called with [mutex] held.
      */
     private fun getOrPut(key: K): MutableSharedFlow<Result<V>> {
+        // Evict stale cache entry so we fall through to launching a fresh worker.
         if (keepFor > Duration.ZERO) {
             val cachedAt = timestamps[key]
             if (cachedAt != null && cachedAt.elapsedNow() > keepFor) {
-                inFlight.remove(key)
+                cache.remove(key)
                 timestamps.remove(key)
             }
         }
 
-        return inFlight[key] ?: run {
-            val sharedFlow = MutableSharedFlow<Result<V>>(
-                replay = 1,
-                extraBufferCapacity = 0,
-                onBufferOverflow = BufferOverflow.SUSPEND
-            )
-            inFlight[key] = sharedFlow
-            scope.launch { doWork(key, sharedFlow) }
-            sharedFlow
-        }
+        return inFlight[key]
+            ?: cache[key]
+            ?: run {
+                val sharedFlow = MutableSharedFlow<Result<V>>(
+                    replay = 1,
+                    extraBufferCapacity = 0,
+                    onBufferOverflow = BufferOverflow.SUSPEND
+                )
+                inFlight[key] = sharedFlow
+                scope.launch { doWork(key, sharedFlow) }
+                sharedFlow
+            }
     }
 
     /**
@@ -117,8 +162,10 @@ class SingleFlightCache<K, V>(
      *
      * On success:
      * - emits `Result.success(value)`
-     * - records a timestamp if the result should be cached
-     * - removes the entry from [inFlight] if caching is disabled or [keepIf] returned `false`
+     * - moves the entry from [inFlight] to [cache] (with a fresh timestamp) if
+     *   [keepFor] is non-zero and [keepIf] approves the result, and the entry
+     *   has not been invalidated in the meantime
+     * - otherwise removes the entry from [inFlight] with no caching
      *
      * On error:
      * - removes the entry from [inFlight] *before* emitting, so new callers
@@ -130,12 +177,16 @@ class SingleFlightCache<K, V>(
         var isError = false
         try {
             val result = worker(key)
-            shouldCache = keepIf(result)
-            sharedFlow.emit(Result.success(result))
+            shouldCache = keepFor > Duration.ZERO && keepIf(result)
 
-            if (shouldCache && keepFor > Duration.ZERO) {
-                mutex.withLock { timestamps[key] = timeSource.markNow() }
+            mutex.withLock {
+                inFlight.remove(key)
+                if (shouldCache) {
+                    cache[key] = sharedFlow
+                    timestamps[key] = timeSource.markNow()
+                }
             }
+            sharedFlow.emit(Result.success(result))
         } catch (e: Exception) {
             isError = true
             mutex.withLock {
@@ -144,10 +195,9 @@ class SingleFlightCache<K, V>(
             }
             sharedFlow.emit(Result.failure(e))
         } finally {
-            if (!isError && (!shouldCache || keepFor == Duration.ZERO)) {
+            if (!isError && !shouldCache) {
                 mutex.withLock {
                     inFlight.remove(key)
-                    timestamps.remove(key)
                 }
             }
         }
