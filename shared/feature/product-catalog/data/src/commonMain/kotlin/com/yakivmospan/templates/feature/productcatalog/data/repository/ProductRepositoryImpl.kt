@@ -5,7 +5,7 @@ import com.yakivmospan.templates.core.common.DispatcherProvider
 import com.yakivmospan.templates.core.common.PageRequest
 import com.yakivmospan.templates.core.common.PaginatedData
 import com.yakivmospan.templates.core.common.Result
-import com.yakivmospan.templates.core.data.SingleFlightCache
+import com.yakivmospan.templates.core.data.SingleFlightCommand
 import com.yakivmospan.templates.core.data.mapper.ExceptionMapper
 import com.yakivmospan.templates.feature.productcatalog.data.local.FavoriteLocalDataSource
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.FavoriteProductEntityMapper
@@ -17,7 +17,6 @@ import com.yakivmospan.templates.feature.productcatalog.domain.repository.Produc
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlin.time.Duration.Companion.minutes
 
 class ProductRepositoryImpl(
     private val remoteDataSource: ProductRemoteDataSource,
@@ -30,9 +29,7 @@ class ProductRepositoryImpl(
     private val scopes: CoroutineScopeProvider
 ) : ProductRepository {
 
-    private val getProductByIdSingleFlightCache = SingleFlightCache<Int, Result<Product>>(
-        scope = scopes.appScope, worker = ::getProductByIdWorker, keepFor = 5.minutes
-    )
+    private val getProductByIdSingleFlightCmd = SingleFlightCommand(scopes.appScope, ::getProductByIdExecutor)
 
     override suspend fun getProducts(pageRequest: PageRequest): Result<PaginatedData<Product>> =
         withContext(dispatchers.io) {
@@ -54,10 +51,10 @@ class ProductRepositoryImpl(
         }
 
     override suspend fun getProductById(id: Int): Result<Product> {
-        return getProductByIdSingleFlightCache.get(id)
+        return getProductByIdSingleFlightCmd.execute(id)
     }
 
-    private suspend fun getProductByIdWorker(id: Int): Result<Product> = withContext(dispatchers.io) {
+    private suspend fun getProductByIdExecutor(id: Int): Result<Product> = withContext(dispatchers.io) {
         try {
             val dto = remoteDataSource.getProductById(id.toString())
             val product = productMapper.map(dto).copy(

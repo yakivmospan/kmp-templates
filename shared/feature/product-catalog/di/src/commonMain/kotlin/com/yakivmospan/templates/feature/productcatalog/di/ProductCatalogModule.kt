@@ -36,16 +36,16 @@ fun productCatalogModules() = listOf(
 
 val productCatalogDataModule = module {
     // Mappers
-    single { ProductMapper() }
-    single { FavoriteProductEntityMapper() }
-    single<ExceptionMapper> { DefaultExceptionMapper() }
-    single { PaginatedProductsMapper(productMapper = get()) }
+    factory { ProductMapper() }
+    factory { FavoriteProductEntityMapper() }
+    factory<ExceptionMapper> { DefaultExceptionMapper() }
+    factory { PaginatedProductsMapper(productMapper = get()) }
 
     // Data Sources
-    single<ProductRemoteDataSource> {
+    factory<ProductRemoteDataSource> {
         ProductRemoteDataSourceImpl(httpClient = get())
     }
-    single<FavoriteLocalDataSource> {
+    factory<FavoriteLocalDataSource> {
         FavoriteLocalDataSourceImpl(
             database = get(),
             dispatchers = get()
