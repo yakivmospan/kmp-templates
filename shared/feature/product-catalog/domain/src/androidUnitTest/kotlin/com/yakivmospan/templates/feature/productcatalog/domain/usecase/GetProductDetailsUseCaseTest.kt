@@ -1,6 +1,7 @@
 package com.yakivmospan.templates.feature.productcatalog.domain.usecase
 
 import com.yakivmospan.templates.core.common.Result
+import com.yakivmospan.templates.core.domain.UpdateStrategy
 import com.yakivmospan.templates.feature.productcatalog.domain.repository.ProductRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -19,33 +20,56 @@ class GetProductDetailsUseCaseTest : UseCaseTest() {
         useCase = GetProductDetailsUseCase(repository)
     }
 
+    // -------------------------------------------------------------------------
+    // Happy path
+    // -------------------------------------------------------------------------
+
     @Test
-    fun `invoke should call repository with correct product id and return result`() = runTest {
+    fun `when useCache is true then repository is called with TRY_CACHED_ELSE_FETCH strategy`() = runTest {
         // Given
-        val productId = 1
+        val params = GetProductDetailsParams(id = 1, useCache = true)
         val expectedResult = Result.Success(ProductTestFixtures.sampleProduct1)
-        coEvery { repository.getProductById(productId) } returns expectedResult
+        coEvery { repository.getProductById(params.id, UpdateStrategy.TRY_CACHED_ELSE_FETCH) } returns expectedResult
 
         // When
-        val result = useCase(productId)
+        val result = useCase(params)
 
         // Then
         assertEquals(expectedResult, result)
-        coVerify(exactly = 1) { repository.getProductById(productId) }
+        coVerify(exactly = 1) { repository.getProductById(params.id, UpdateStrategy.TRY_CACHED_ELSE_FETCH) }
     }
 
     @Test
-    fun `invoke should return error when repository returns error`() = runTest {
+    fun `when useCache is false then repository is called with TRY_FETCH_ELSE_CACHED strategy`() = runTest {
         // Given
-        val productId = 999
-        val expectedResult = Result.Error(Exception("Product not found"))
-        coEvery { repository.getProductById(productId) } returns expectedResult
+        val params = GetProductDetailsParams(id = 1, useCache = false)
+        val expectedResult = Result.Success(ProductTestFixtures.sampleProduct1)
+        coEvery { repository.getProductById(params.id, UpdateStrategy.TRY_FETCH_ELSE_CACHED) } returns expectedResult
 
         // When
-        val result = useCase(productId)
+        val result = useCase(params)
 
         // Then
         assertEquals(expectedResult, result)
-        coVerify(exactly = 1) { repository.getProductById(productId) }
+        coVerify(exactly = 1) { repository.getProductById(params.id, UpdateStrategy.TRY_FETCH_ELSE_CACHED) }
+    }
+
+    // -------------------------------------------------------------------------
+    // Error path
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `when repository returns error then result is propagated`() = runTest {
+        // Given
+        val params = GetProductDetailsParams(id = 999, useCache = true)
+        val expectedResult = Result.Error(Exception("Product not found"))
+        coEvery { repository.getProductById(params.id, UpdateStrategy.TRY_CACHED_ELSE_FETCH) } returns expectedResult
+
+        // When
+        val result = useCase(params)
+
+        // Then
+        assertEquals(expectedResult, result)
+        coVerify(exactly = 1) { repository.getProductById(params.id, UpdateStrategy.TRY_CACHED_ELSE_FETCH) }
     }
 }

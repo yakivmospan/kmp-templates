@@ -5,8 +5,11 @@ import com.yakivmospan.templates.core.common.DispatcherProvider
 import com.yakivmospan.templates.core.common.PageRequest
 import com.yakivmospan.templates.core.common.PaginatedData
 import com.yakivmospan.templates.core.common.Result
-import com.yakivmospan.templates.core.data.SingleFlightCommand
+import com.yakivmospan.templates.core.data.cache.InMemoryKeyedCache
+import com.yakivmospan.templates.core.data.cache.TimestampExpirationValidator
 import com.yakivmospan.templates.core.data.mapper.ExceptionMapper
+import com.yakivmospan.templates.core.data.singleflight.SingleFlightCommand
+import com.yakivmospan.templates.core.domain.UpdateStrategy
 import com.yakivmospan.templates.feature.productcatalog.data.local.FavoriteLocalDataSource
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.FavoriteProductEntityMapper
 import com.yakivmospan.templates.feature.productcatalog.data.mapper.PaginatedProductsMapper
@@ -14,9 +17,11 @@ import com.yakivmospan.templates.feature.productcatalog.data.mapper.ProductMappe
 import com.yakivmospan.templates.feature.productcatalog.data.remote.ProductRemoteDataSource
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.repository.ProductRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.seconds
 
 class ProductRepositoryImpl(
     private val remoteDataSource: ProductRemoteDataSource,
@@ -29,7 +34,10 @@ class ProductRepositoryImpl(
     private val scopes: CoroutineScopeProvider
 ) : ProductRepository {
 
-    private val getProductByIdSingleFlightCmd = SingleFlightCommand(scopes.appScope, ::getProductByIdExecutor)
+    private val getRemoteProductByIdSingleFlightCmd = SingleFlightCommand(scopes.appScope, ::getRemoteProductByIdExecutor)
+
+    // simulating short living in memory cache
+    private val productByIdCache = InMemoryKeyedCache<Int, Result<Product>> { TimestampExpirationValidator(30.seconds) }
 
     override suspend fun getProducts(pageRequest: PageRequest): Result<PaginatedData<Product>> =
         withContext(dispatchers.io) {
@@ -50,17 +58,45 @@ class ProductRepositoryImpl(
             }
         }
 
-    override suspend fun getProductById(id: Int): Result<Product> {
-        return getProductByIdSingleFlightCmd.execute(id)
+    override suspend fun getProductById(id: Int, strategy: UpdateStrategy): Result<Product> = when (strategy) {
+        UpdateStrategy.ALWAYS_FETCH -> getRemoteProductByIdSingleFlightCmd.execute(id)
+        UpdateStrategy.ALWAYS_CACHED -> getCachedProduct(id)
+        UpdateStrategy.TRY_FETCH_ELSE_CACHED -> tryFetchProductElseCached(id)
+        UpdateStrategy.TRY_CACHED_ELSE_FETCH -> tryCachedProductElseFetch(id)
     }
 
-    private suspend fun getProductByIdExecutor(id: Int): Result<Product> = withContext(dispatchers.io) {
+    private suspend fun getCachedProduct(id: Int): Result<Product> {
+        return productByIdCache.get(id) ?: getLocalFavorite(id)
+    }
+
+    private suspend fun tryCachedProductElseFetch(id: Int): Result<Product> {
+        val cached = getCachedProduct(id)
+        return if (cached is Result.Error) getRemoteProductByIdSingleFlightCmd.execute(id) else cached
+    }
+
+    private suspend fun tryFetchProductElseCached(id: Int): Result<Product> {
+        val fetched = getRemoteProductByIdSingleFlightCmd.execute(id)
+        return if (fetched is Result.Error) getCachedProduct(id) else fetched
+
+    }
+
+    private suspend fun getLocalFavorite(id: Int): Result<Product> {
+        return try {
+            val entity = localDataSource.getFavoriteById(id)
+            Result.Success(favoriteProductEntityMapper.map(entity ?: throw Exception("Product not found.")))
+        } catch (e: Exception) {
+            Result.Error(exceptionMapper.map(e))
+        }
+    }
+
+    private suspend fun getRemoteProductByIdExecutor(id: Int): Result<Product> = withContext(dispatchers.io) {
         try {
+            delay(5.seconds) // simulating heavy operation
             val dto = remoteDataSource.getProductById(id.toString())
             val product = productMapper.map(dto).copy(
                 isFavorite = localDataSource.isFavorite(dto.id)
             )
-            Result.Success(product)
+            Result.Success(product).also { productByIdCache.put(id, it) }
         } catch (e: Exception) {
             Result.Error(exceptionMapper.map(e))
         }

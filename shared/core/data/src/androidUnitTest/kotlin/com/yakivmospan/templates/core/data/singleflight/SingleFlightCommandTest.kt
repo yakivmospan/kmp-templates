@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.core.data
+package com.yakivmospan.templates.core.data.singleflight
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

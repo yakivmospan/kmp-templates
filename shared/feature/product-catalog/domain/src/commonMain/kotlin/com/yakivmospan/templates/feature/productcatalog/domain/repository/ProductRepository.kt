@@ -3,12 +3,13 @@ package com.yakivmospan.templates.feature.productcatalog.domain.repository
 import com.yakivmospan.templates.core.common.PageRequest
 import com.yakivmospan.templates.core.common.PaginatedData
 import com.yakivmospan.templates.core.common.Result
+import com.yakivmospan.templates.core.domain.UpdateStrategy
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import kotlinx.coroutines.flow.Flow
 
 interface ProductRepository {
     suspend fun getProducts(pageRequest: PageRequest): Result<PaginatedData<Product>>
-    suspend fun getProductById(id: Int): Result<Product>
+    suspend fun getProductById(id: Int, strategy: UpdateStrategy): Result<Product>
     suspend fun searchProducts(query: String, pageRequest: PageRequest): Result<PaginatedData<Product>>
 
     suspend fun addToFavorites(product: Product): Result<Unit>

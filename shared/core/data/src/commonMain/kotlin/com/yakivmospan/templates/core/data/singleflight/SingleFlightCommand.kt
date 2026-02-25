@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.core.data
+package com.yakivmospan.templates.core.data.singleflight
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -17,27 +17,69 @@ import kotlinx.coroutines.sync.withLock
  * (the "single flight" pattern).
  *
  * ### Single flight
- * If multiple coroutines call [execute] or [executeFlow] for the same key concurrently,
- * only one [executor] invocation is launched. All callers share the same [MutableSharedFlow]
+ * If multiple coroutines call [execute] or [executionFlow] for the same key concurrently,
+ * only one [executor] invocation is launched. All callers share the same [kotlinx.coroutines.flow.MutableSharedFlow]
  * and receive the result (or error) when the executor completes.
+ *
+ * ### Flow contract
+ * The returned flow is a single-shot stream that emits one value and completes.
+ * It is primarily intended for structured concurrency integration rather than
+ * continuous observation.
  *
  * ### Error handling
  * If [executor] throws, the entry is removed before the error is broadcast, so the
  * next caller will trigger a fresh [executor] invocation. All current subscribers
- * receive the exception via [Flow] termination.
+ * receive the exception via [kotlinx.coroutines.flow.Flow] termination.
  *
  * ### Thread safety
- * All mutations to internal state are guarded by a [Mutex]. Note that [executor] and
- * [MutableSharedFlow.emit] are intentionally called *outside* the lock to avoid
+ * All mutations to internal state are guarded by a [kotlinx.coroutines.sync.Mutex]. Note that [executor] and
+ * [kotlinx.coroutines.flow.MutableSharedFlow.emit] are intentionally called *outside* the lock to avoid
  * suspending while holding it.
+ *
+ * ### When parameters are NOT needed
+ * If you only need to deduplicate a single operation without keys,
+ * use the non-parameter variant: [SingleFlightCommand] (no key version).
+ *
+ * ### Usage
+ *
+ * Basic usage with suspending API:
+ *
+ * ```
+ * val command = SingleFlightCommand<String, User>(
+ *     scope = viewModelScope,
+ *     executor = { userId -> api.getUser(userId) }
+ * )
+ *
+ * val user = command.execute("123")
+ * ```
+ *
+ * Using Flow API:
+ *
+ * ```
+ * viewModelScope.launch {
+ *     command.executionFlow("123").collect { user ->
+ *         render(user)
+ *     }
+ * }
+ * ```
+ *
+ * Deduplicating concurrent requests per key:
+ *
+ * ```
+ * suspend fun loadUser(id: String): User {
+ *     return command.execute(id)
+ * }
+ * ```
  *
  * @param K The key type used to identify distinct in-flight entries.
  * @param V The value type produced by [executor].
- * @param scope The [CoroutineScope] in which executor coroutines are launched.
+ * @param scope The [kotlinx.coroutines.CoroutineScope] in which executor coroutines are launched.
  * @param executor The suspending function invoked to produce a value for a given key.
- * @param onSuccess Optional callback invoked with the result after a successful [executor] invocation, but before broadcasting to subscribers.
+ * @param onSuccess Optional callback invoked with the result after a successful [executor]
+ * invocation, but before broadcasting to subscribers.
  *   Runs on [scope], so it survives cancellation of any individual caller's scope.
- * @param onError Optional callback invoked with the exception after a failed [executor] invocation, but before broadcasting to subscribers.
+ * @param onError Optional callback invoked with the exception after a failed [executor]
+ * invocation, but before broadcasting to subscribers.
  *   Runs on [scope], so it survives cancellation of any individual caller's scope.
  */
 class SingleFlightCommand<K, V>(
@@ -59,7 +101,7 @@ class SingleFlightCommand<K, V>(
     suspend fun execute(key: K): V = executionFlow(key).first()
 
     /**
-     * Returns a cold [Flow] that emits a single value for [key] and completes,
+     * Returns a cold [kotlinx.coroutines.flow.Flow] that emits a single value for [key] and completes,
      * or throws if the executor throws.
      *
      * Collecting this flow will either join an in-flight executor or launch a new
@@ -105,6 +147,7 @@ class SingleFlightCommand<K, V>(
      */
     private suspend fun doExecute(key: K, sharedFlow: MutableSharedFlow<Result<V>>) {
         // 0. Launched only once for new added key.
+        var cleared = false
 
         try {
             // 1. Execute the outside work
@@ -120,10 +163,10 @@ class SingleFlightCommand<K, V>(
             onError?.invoke(e)
 
             // Remove before emitting so new callers get a fresh executor
-            mutex.withLock { inFlight.remove(key) }
+            mutex.withLock { inFlight.remove(key) }.also { cleared = true }
             sharedFlow.emit(Result.failure(e))
         } finally {
-            mutex.withLock { inFlight.remove(key) }
+            if (!cleared) mutex.withLock { inFlight.remove(key) }
         }
     }
 }

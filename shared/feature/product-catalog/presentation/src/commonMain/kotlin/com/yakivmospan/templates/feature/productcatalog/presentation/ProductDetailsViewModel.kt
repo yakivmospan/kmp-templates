@@ -6,6 +6,7 @@ import com.yakivmospan.templates.core.common.Result
 import com.yakivmospan.templates.core.domain.DomainException
 import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
+import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
@@ -51,7 +52,7 @@ class ProductDetailsViewModel(
     private fun loadProduct(id: Int = productId) = viewModelScope.launch {
         _state.update { it.copy(isLoading = true) }
 
-        when (val result = getProductDetailsUseCase(id)) {
+        when (val result = getProductDetailsUseCase(GetProductDetailsParams(id, useCache = true))) {
             is Result.Success -> onLoadProductSuccess(result)
             is Result.Error -> onLoadProductError(result)
         }
