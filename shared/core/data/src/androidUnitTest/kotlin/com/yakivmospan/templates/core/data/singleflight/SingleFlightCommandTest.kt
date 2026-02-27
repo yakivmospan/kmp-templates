@@ -84,7 +84,7 @@ class SingleFlightCommandTest {
         val result = async {
             command.executionFlow("key 1")
                 .onEach { events.add("broadcast") }
-                .first()
+                .collect {}
         }
 
         result.await()
@@ -517,7 +517,7 @@ class SingleFlightCommandTest {
         }
 
         assertFailsWith<RuntimeException> {
-            command.executionFlow("key 1").first()
+            command.executionFlow("key 1").collect {}
         }
 
         assertEquals(2, onExecuteCallCounts)

@@ -109,7 +109,7 @@ class SingleFlightCommand<K, V>(
      */
     fun executionFlow(key: K): Flow<V> = flow {
         val sharedFlow = mutex.withLock { launchIfAbsent(key) }
-        emitAll(sharedFlow.map { it.getOrThrow() })
+        emit(sharedFlow.map { it.getOrThrow() }.first())
     }
 
     /**
