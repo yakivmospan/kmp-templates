@@ -35,10 +35,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesEvent
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
-import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import org.koin.androidx.compose.koinViewModel
 

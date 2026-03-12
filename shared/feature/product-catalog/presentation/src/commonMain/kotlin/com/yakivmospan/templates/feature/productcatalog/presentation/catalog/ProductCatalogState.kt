@@ -1,4 +1,5 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.catalog
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
 
 data class ProductCatalogState(
     val searchResult: List<ProductViewData> = emptyList(),

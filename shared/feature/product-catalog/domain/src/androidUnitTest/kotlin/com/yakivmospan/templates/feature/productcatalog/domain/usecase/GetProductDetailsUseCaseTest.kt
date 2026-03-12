@@ -6,18 +6,35 @@ import com.yakivmospan.templates.feature.productcatalog.domain.repository.Produc
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class GetProductDetailsUseCaseTest : UseCaseTest() {
+@OptIn(ExperimentalCoroutinesApi::class)
+class GetProductDetailsUseCaseTest() {
 
     private lateinit var repository: ProductRepository
     private lateinit var useCase: GetProductDetailsUseCase
 
-    override fun setupTest() {
+    private val testDispatcher = StandardTestDispatcher()
+
+    @BeforeTest
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
         repository = mockk()
         useCase = GetProductDetailsUseCase(repository)
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     // -------------------------------------------------------------------------

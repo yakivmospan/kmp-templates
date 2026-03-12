@@ -42,6 +42,13 @@ Ktor HTTP client setup: `HttpClientFactory` (expect/actual for Android OkHttp / 
 ### `:shared:core:navigation`
 Cross-platform navigation contracts: `Navigator`, `NavigationTarget`, `NavigationRoute`, `NavigationResult`, `FlowNavigator` (SharedFlow-based implementation).
 
+### `:shared:core:presentation`
+Base `ViewModel<Event, State, SideEffect>` class extending `androidx.lifecycle.ViewModel`. Provides:
+- `state: StateFlow<State>` — UI state
+- `sideEffects: SharedFlow<SideEffect>` — one-shot effects (navigation, toasts, etc.)
+- `emitSideEffect(effect)` — protected helper for subclasses
+- `ViewModelEventReceiver<Event>` interface
+
 ### `:shared:core:di`
 Koin module that wires core services: navigator, HTTP client, dispatcher provider, coroutine scope provider.
 
@@ -106,5 +113,6 @@ kmp-templates/
 - **Single-flight** deduplication for concurrent identical network requests
 - **In-memory cache** with TTL expiry backed by `MutableStateFlow`
 - **ViewModel events** (sealed interface) instead of direct method calls — simplifies Swift interop
+- **ViewModel side effects** (`SharedFlow<SideEffect>`) for one-shot effects (navigation triggers, toasts, dialogs) — collected by the UI once
 - **SKIE** for seamless Kotlin Flow to Swift async/await bridging
 - **Moko Resources** for shared string resources across platforms

@@ -39,7 +39,7 @@ Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-mu
 
 Assumptions made:
 
-1. We are building an app that is as close to our production app as possible
+1. We are building an app that is as close production as possible
 2. We are building a modularized app with multiple features, each feature has its own domain, data, presentation layers.
 3. We have more than 10 features, so we need to ensure scalability of the architecture.
 4. We want to enforce strict separation of concerns and dependencies between layers.
@@ -79,36 +79,35 @@ Technologies used:
 
 - Created `iosAppFramework` module to setup `Shared` framework for iOS, this is where we create the Koin module and initialize
   it, so that it can be used in the iOS app.
-- `KoinInitializer` used to initialize koin dependency graph. `KoinHelper` used to get `ViewModels` (or other dependencies) from koin graph.
+- `KoinInitializer` used to initialize koin dependency graph. `KoinHelper` used to get `ViewModels` (or other dependencies) from
+  koin graph.
 - Moko resources are used to share and access string resources on both platforms (it is v0.26.0.. but skie is 0.10.0..)
 - There is general navigation interface, that need to be later implemented on iOS.
-- ViewModels uses events to communicate with UI, not methods - this make it easier to call them from SwiftUI, less adapter code is
+- ViewModels uses events to communicate with UI (aka MVI style), not methods - this make it easier to call them from SwiftUI, less
+  adapter code is
   needed, less error prone. Added general base `ObservableViewModel` to work with this approach.
 - ViewModel flow state is converted with SKIE.
-- Added simple `ProductCatalogView` to show how to use ViewModel from SwiftUI.
+- Simple `ProductCatalogView` is added to show how to use ViewModel from SwiftUI.
 
 # Trade-offs
 
+- Hardcoded values may be found over some places.
 - UI is mostly done with AI and its code was not properly reviewed, only manually tested and iterated over.
-- UI may have hardcoded values.
-- All UI items share one ViewData object, so Details screen shows the same data as the List screen, which is not ideal but was
-  done for simplicity and speed of development.
-- There is no UI Module separation, im not sure if you are doing it in your production app, but for this sample i wanted to keep
-  it simple, focusing more on shared architecture and code sharing, rather than on UI modularization.
-- List state is not preserved when navigating between tabs - this will require to update Navigator and think about iOS handling of
-  it.
-- Overall state handling with navigation is not ideal and requires time for improvements.
-- `ViewModelTest`, `UseCaseTest` and `TestDispatcherProvider` should be moved to separate common test module
-- Favorite button can be added directly on the list items on Catalog and Favorites screens, but for simplicity it was added only
-  on the Details scree.
-- No documentation was added to view models, in real life it would be good to have a solid contract for each view model,
-  describing what it does, what are its inputs and outputs, and how it should be used.
+- Product feature is simplified to use one ViewData for all screens.
+- There is no UI Module separation yet, we assume we are still in the early stages of the project. Focus on features and shared
+  code.
+- List state is not preserved when navigating between tabs - requires to update Navigator and adding iOS implementation.
+- Overall state handling with navigation is not ideal and requires improvements (Navigation 3.0, use string routes instead of
+  sealed classes to make it iOS friendly).
+- No documentation was added to view models, in real life a solid contract for each view model should be present to describe what
+  it does, what are its inputs and outputs, and how it should be used.
 - Not all view models have tests. Added one to show the approach.
 - Not all mappers have tests, added UI mappers only.
-- Search states can be improved, again UI is a black box here.
-- SQL exceptions are not handled in Default Domain ExceptionMapper
+- Mappers are made as objects - now I doubt if it is a good idea, not Kotlin idiomatic, tested in isolation, and I doubt will be ever a need to swap them with DI. 
+- Search states can be improved.
+- SQL exceptions are not handled in Default Domain ExceptionMapper.
 - Database is created per feature. If required can be moved to a core module like we have with network. It has its own advantages
-  and disadvantages.
+  and disadvantages (isolated but cannot run complex select QUERIES with data from other features).
 - No database migration was designed.
 - NO ASC, DESC implemented, even though PageRequest has it. No sorting is implemented at all, but it can be easily added in the
   future.

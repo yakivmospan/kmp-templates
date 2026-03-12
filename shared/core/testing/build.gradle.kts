@@ -12,37 +12,16 @@ kotlin {
         }
     }
 
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ProductCatalogDomain"
-            isStatic = true
-        }
-    }
-
     sourceSets {
         commonMain.dependencies {
             implementation(projects.shared.core.common)
-            implementation(projects.shared.core.domain)
-
-            implementation(libs.kotlinx.coroutines.core)
-        }
-
-        // Test dependencies
-        androidUnitTest.dependencies {
-            implementation(projects.shared.core.testing)
-            implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
-            implementation(libs.mockk)
         }
     }
 }
 
 android {
-    namespace = "com.yakivmospan.templates.feature.productcatalog.domain"
+    namespace = "com.yakivmospan.templates.core.testing"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
@@ -54,3 +33,4 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 }
+

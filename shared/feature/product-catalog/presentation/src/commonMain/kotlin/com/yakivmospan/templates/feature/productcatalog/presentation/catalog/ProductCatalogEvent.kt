@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.catalog
 
 sealed class ProductCatalogEvent {
     data class LoadPage(val page: Int) : ProductCatalogEvent()

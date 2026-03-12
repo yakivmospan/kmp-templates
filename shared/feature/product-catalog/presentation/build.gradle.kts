@@ -29,6 +29,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.shared.core.common)
             implementation(projects.shared.core.domain)
+            implementation(projects.shared.core.presentation)
             implementation(projects.shared.core.navigation)
             implementation(projects.shared.feature.productCatalog.domain)
 
@@ -43,6 +44,7 @@ kotlin {
 
         // Test dependencies
         androidUnitTest.dependencies {
+            implementation(projects.shared.core.testing)
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.mockk)

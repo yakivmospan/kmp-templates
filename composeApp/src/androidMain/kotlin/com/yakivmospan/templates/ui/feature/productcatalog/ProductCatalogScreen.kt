@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogEvent
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
 import dev.icerock.moko.resources.compose.stringResource

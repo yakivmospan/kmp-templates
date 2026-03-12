@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.details
 
 sealed class ProductDetailsEvent {
     data class LoadProduct(val productId: Int) : ProductDetailsEvent()

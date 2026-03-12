@@ -17,6 +17,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             // Core modules
+            implementation(projects.shared.core.presentation)
             implementation(projects.shared.core.navigation)
             implementation(projects.shared.core.di)
 
@@ -73,6 +74,10 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    dependencies {
+        debugImplementation(libs.androidx.compose.ui.tooling)
     }
 
     compileOptions {

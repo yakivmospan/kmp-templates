@@ -13,6 +13,8 @@ import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchPro
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig.PAGE_PAGINATION_SIZE
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig.SEARCH_DEBOUNCE_MS
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogState
 import dev.icerock.moko.resources.desc.StringDesc
 import dev.icerock.moko.resources.desc.desc
 import kotlinx.coroutines.FlowPreview

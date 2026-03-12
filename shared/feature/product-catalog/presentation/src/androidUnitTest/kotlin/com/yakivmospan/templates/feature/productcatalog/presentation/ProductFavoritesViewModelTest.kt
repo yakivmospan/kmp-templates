@@ -2,33 +2,51 @@ package com.yakivmospan.templates.feature.productcatalog.presentation
 
 import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesState
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesViewModel
 import dev.icerock.moko.resources.desc.RawStringDesc
 import dev.icerock.moko.resources.desc.StringDesc
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ProductFavoritesViewModelTest : ViewModelTest() {
+class ProductFavoritesViewModelTest() {
 
     private lateinit var navigator: Navigator
     private lateinit var observeFavoritesUseCase: ObserveFavoritesUseCase
     private lateinit var viewDataMapper: ProductToViewDataMapper
 
-    override fun setupTest() {
+    private val testDispatcher = StandardTestDispatcher()
+
+    @BeforeTest
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
         navigator = mockk(relaxed = true)
         observeFavoritesUseCase = mockk()
         viewDataMapper = ProductToViewDataMapper()
     }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
 
     // Step 1: Initial State Test
     @Test

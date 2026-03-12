@@ -52,8 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsEvent
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource

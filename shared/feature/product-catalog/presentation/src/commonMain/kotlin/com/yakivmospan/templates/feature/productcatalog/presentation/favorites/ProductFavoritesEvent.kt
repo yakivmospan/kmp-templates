@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.favorites
 
 sealed class ProductFavoritesEvent {
     data class SelectProduct(val productId: Int) : ProductFavoritesEvent()

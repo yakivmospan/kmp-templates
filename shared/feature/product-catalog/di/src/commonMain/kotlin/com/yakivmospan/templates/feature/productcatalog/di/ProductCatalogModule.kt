@@ -16,10 +16,10 @@ import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProduc
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogHomeViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.home.ProductCatalogHomeViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductDetailsViewModel
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductFavoritesViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewDataToEntityMapper
 import org.koin.core.module.Module

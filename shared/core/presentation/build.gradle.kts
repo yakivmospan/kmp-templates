@@ -18,31 +18,21 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "ProductCatalogDomain"
+            baseName = "CorePresentation"
             isStatic = true
         }
     }
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.shared.core.common)
-            implementation(projects.shared.core.domain)
-
             implementation(libs.kotlinx.coroutines.core)
-        }
-
-        // Test dependencies
-        androidUnitTest.dependencies {
-            implementation(projects.shared.core.testing)
-            implementation(libs.kotlin.test)
-            implementation(libs.kotlinx.coroutines.test)
-            implementation(libs.mockk)
+            implementation(libs.lifecycle.viewmodel)
         }
     }
 }
 
 android {
-    namespace = "com.yakivmospan.templates.feature.productcatalog.domain"
+    namespace = "com.yakivmospan.templates.core.presentation"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {

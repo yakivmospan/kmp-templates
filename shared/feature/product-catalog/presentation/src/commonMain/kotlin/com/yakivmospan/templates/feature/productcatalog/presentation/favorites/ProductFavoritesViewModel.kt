@@ -1,10 +1,15 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.favorites
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.MR
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogNavigationTargets
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
 import dev.icerock.moko.resources.desc.StringDesc
 import dev.icerock.moko.resources.desc.desc
 import kotlinx.coroutines.FlowPreview

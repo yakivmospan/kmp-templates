@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.core.testing
 
 import com.yakivmospan.templates.core.common.DispatcherProvider
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,3 +24,4 @@ class TestDispatcherProvider(
     override val io: CoroutineDispatcher = ioDispatcher
     override val default: CoroutineDispatcher = defaultDispatcher
 }
+

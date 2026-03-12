@@ -1,4 +1,4 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.details
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +10,9 @@ import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProduc
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductDetailsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.MR
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewDataToEntityMapper
 import dev.icerock.moko.resources.desc.StringDesc
 import dev.icerock.moko.resources.desc.desc
 import kotlinx.coroutines.flow.MutableSharedFlow

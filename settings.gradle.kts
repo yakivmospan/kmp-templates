@@ -36,8 +36,10 @@ include(":iosAppFramework")
 
 // Core Modules
 include(":shared:core:common")
+include(":shared:core:testing")
 include(":shared:core:domain")
 include(":shared:core:data")
+include(":shared:core:presentation")
 include(":shared:core:network")
 include(":shared:core:navigation")
 include(":shared:core:di")
