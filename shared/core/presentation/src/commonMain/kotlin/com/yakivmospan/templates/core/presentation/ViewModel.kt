@@ -6,17 +6,21 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-open class ViewModel<Event, State, SideEffect>(initialState: State) : ViewModelEventReceiver<Event>, androidx.lifecycle.ViewModel() {
+abstract class ViewModel<Event, State, SideEffect>(initialState: State) : ViewModelEventReceiver<Event>, androidx.lifecycle.ViewModel() {
     private val _state: MutableStateFlow<State> = MutableStateFlow(initialState)
     val state: StateFlow<State> = _state
 
     private val _sideEffect: MutableSharedFlow<SideEffect> = MutableSharedFlow(extraBufferCapacity = 1)
     val sideEffects: SharedFlow<SideEffect> = _sideEffect.asSharedFlow()
 
-    override fun onEvent(event: Event) {}
+    abstract override fun onEvent(event: Event)
 
     protected fun updateState(update: (State) -> State) {
         _state.value = update(_state.value)
+    }
+
+    protected fun updateState(update: State): Unit {
+        _state.value = update
     }
 
     protected fun emitSideEffect(effect: SideEffect) = _sideEffect.tryEmit(effect)

@@ -56,13 +56,12 @@ fun AppNavigation(
     // Destination graph
     NavHost(navController, startDestination = ProductCatalogNavigationRoutes.ProductCatalogHome) {
         composable<ProductCatalogNavigationRoutes.ProductCatalogHome> {
-            ProductCatalogHomeScreen(innerPadding)
+            ProductCatalogHomeScreen()
         }
 
         composable<ProductCatalogNavigationRoutes.ProductDetails> { backStackEntry ->
             val route = backStackEntry.toRoute<ProductCatalogNavigationRoutes.ProductDetails>()
             ProductDetailsScreen(
-                innerPadding = innerPadding,
                 productId = route.id
             )
         }

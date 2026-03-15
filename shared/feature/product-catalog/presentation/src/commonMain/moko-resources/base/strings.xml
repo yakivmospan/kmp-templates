@@ -34,6 +34,9 @@
     <string name="pd_catalog_feature_no_more_products_label">No more products</string>
 
     <!-- Product Catalog -->
+
+    <string name="pd_catalog_feature_catalog_tab">Catalog</string>
+    <string name="pd_catalog_feature_favorites_tab">Favorites</string>
     <string name="pd_catalog_feature_title">Products</string>
 
     <!-- Product Details -->

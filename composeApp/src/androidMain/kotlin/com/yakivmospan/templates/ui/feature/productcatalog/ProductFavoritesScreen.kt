@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,20 +25,30 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesSideEffect
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesState
 import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
+import com.yakivmospan.templates.presentation.theme.AppTheme
+import com.yakivmospan.templates.ui.utils.CollectSideEffects
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import dev.icerock.moko.resources.compose.stringResource
 import org.koin.androidx.compose.koinViewModel
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public overload — ViewModel-connected
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ProductFavoritesScreen(
@@ -49,23 +58,64 @@ fun ProductFavoritesScreen(
     val state = viewModel.state.collectAsStateWithLifecycle()
     val searchQuery = viewModel.searchQuery.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val onEvent: (ProductFavoritesEvent) -> Unit = viewModel::onEvent
     val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
-
-    // Handle error display in Snackbar
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        viewModel.errorEvent.collect { error ->
-            val result = snackbarHostState.showSnackbar(
-                message = error.toString(context),
-                actionLabel = retryButtonLabel,
-                duration = SnackbarDuration.Long
+
+    CollectSideEffects(viewModel.sideEffects) { sideEffect ->
+        when (sideEffect) {
+            is ProductFavoritesSideEffect.ShowError -> handleShowError(
+                sideEffect = sideEffect,
+                snackbarHostState = snackbarHostState,
+                retryButtonLabel = retryButtonLabel,
+                context = context,
+                onEvent = onEvent,
             )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.onEvent(ProductFavoritesEvent.Retry)
-            }
         }
     }
 
+    ProductFavoritesScreen(
+        innerPadding = innerPadding,
+        state = state.value,
+        searchQuery = searchQuery.value,
+        snackbarHostState = snackbarHostState,
+        onEvent = onEvent,
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Side effects
+// ─────────────────────────────────────────────────────────────────────────────
+
+private suspend fun handleShowError(
+    sideEffect: ProductFavoritesSideEffect.ShowError,
+    snackbarHostState: SnackbarHostState,
+    retryButtonLabel: String,
+    context: android.content.Context,
+    onEvent: (ProductFavoritesEvent) -> Unit,
+) {
+    val result = snackbarHostState.showSnackbar(
+        message = sideEffect.message.toString(context),
+        actionLabel = retryButtonLabel,
+        duration = SnackbarDuration.Long
+    )
+    if (result == SnackbarResult.ActionPerformed) {
+        onEvent(ProductFavoritesEvent.Retry)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private overload — stateless, Preview-friendly
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ProductFavoritesScreen(
+    innerPadding: PaddingValues,
+    state: ProductFavoritesState,
+    searchQuery: String,
+    snackbarHostState: SnackbarHostState,
+    onEvent: (ProductFavoritesEvent) -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -74,35 +124,24 @@ fun ProductFavoritesScreen(
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
-                .safeContentPadding()
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Show SearchBar only when there are favorites (not empty)
-            if (state.value.favorites.isNotEmpty()) {
+            if (state.favorites.isNotEmpty()) {
                 SearchBar(
-                    query = searchQuery.value,
-                    isSearching = state.value.isSearching,
-                    onQueryChange = { query ->
-                        viewModel.onEvent(ProductFavoritesEvent.SearchFavorites(query))
-                    },
-                    onClearClick = {
-                        viewModel.onEvent(ProductFavoritesEvent.ClearSearch)
-                    },
+                    query = searchQuery,
+                    isSearching = state.isSearching,
+                    onQueryChange = { query -> onEvent(ProductFavoritesEvent.SearchFavorites(query)) },
+                    onClearClick = { onEvent(ProductFavoritesEvent.ClearSearch) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
 
-            val isSearchMode = searchQuery.value.isNotBlank()
-
-            // Determine which items to display
-            val displayItems = if (isSearchMode) {
-                state.value.searchResult
-            } else {
-                state.value.favorites
-            }
+            val isSearchMode = searchQuery.isNotBlank()
+            val displayItems = if (isSearchMode) state.searchResult else state.favorites
 
             // Content Area - Handle loading, empty, and content states
             Box(
@@ -112,7 +151,7 @@ fun ProductFavoritesScreen(
             ) {
                 when {
                     // Loading state (initial load)
-                    state.value.isLoading -> {
+                    state.isLoading -> {
                         LoadingState(
                             modifier = Modifier.align(Alignment.Center),
                             message = stringResource(MR.strings.pd_catalog_feature_loading_products_label)
@@ -120,18 +159,18 @@ fun ProductFavoritesScreen(
                     }
 
                     // Empty state - No favorites yet
-                    state.value.favorites.isEmpty() && !state.value.isLoading -> {
+                    state.favorites.isEmpty() && !state.isLoading -> {
                         NoFavoritesEmptyState(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
 
                     // Empty state - No search results
-                    displayItems.isEmpty() && isSearchMode && !state.value.isSearching -> {
+                    displayItems.isEmpty() && !state.isSearching -> {
                         EmptyState(
                             modifier = Modifier.align(Alignment.Center),
                             isSearchActive = true,
-                            searchQuery = searchQuery.value
+                            searchQuery = searchQuery
                         )
                     }
 
@@ -140,9 +179,7 @@ fun ProductFavoritesScreen(
                         FavoritesList(
                             displayItems = displayItems,
                             onProductClick = { productId ->
-                                viewModel.onEvent(
-                                    ProductFavoritesEvent.SelectProduct(productId)
-                                )
+                                onEvent(ProductFavoritesEvent.SelectProduct(productId))
                             }
                         )
                     }
@@ -170,9 +207,14 @@ fun ProductFavoritesScreen(
     }
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun FavoritesList(
-    displayItems: List<ProductViewData>,
+    displayItems: ImmutableList<ProductViewData>,
     onProductClick: (Int) -> Unit
 ) {
     LazyColumn(
@@ -221,3 +263,75 @@ private fun NoFavoritesEmptyState(
         )
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Previews
+// ─────────────────────────────────────────────────────────────────────────────
+
+@PreviewLightDark
+@Composable
+private fun ProductFavoritesScreenLoadingPreview() {
+    AppTheme {
+        ProductFavoritesScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductFavoritesState(isLoading = true),
+            searchQuery = "",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductFavoritesScreenNoFavoritesPreview() {
+    AppTheme {
+        ProductFavoritesScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductFavoritesState(),
+            searchQuery = "",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductFavoritesScreenLoadedPreview() {
+    val items = persistentListOf(
+        ProductViewData(id = 1, title = "Smartphone Pro", description = "Latest model", price = 999.99, formattedPrice = "$999.99", imageUrl = "", isFavorite = true),
+        ProductViewData(id = 2, title = "Wireless Headphones", description = "Noise cancelling", price = 199.99, formattedPrice = "$199.99", imageUrl = "", isFavorite = true),
+    )
+    AppTheme {
+        ProductFavoritesScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductFavoritesState(favorites = items, searchResult = items),
+            searchQuery = "",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductFavoritesScreenEmptySearchPreview() {
+    val items = persistentListOf(
+        ProductViewData(id = 1, title = "Smartphone Pro", description = "Latest model", price = 999.99, formattedPrice = "$999.99", imageUrl = "", isFavorite = true),
+    )
+    AppTheme {
+        ProductFavoritesScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductFavoritesState(
+                favorites = items,
+                searchResult = persistentListOf(),
+                isSearching = false,
+            ),
+            searchQuery = "xyz",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <!-- PinKeyboard -->
+    <string name="login_key_digit_description">Digit %1$d</string>
+    <string name="login_key_backspace">Delete last digit</string>
+    <string name="login_key_clear">Clear all digits</string>
+    <string name="login_key_clear_label">CLR</string>
+
+    <!-- PinDisplay -->
+    <string name="login_pin_display_description">PIN entry, %1$d of %2$d digits entered</string>
+
+    <!-- Create PIN screen -->
+    <string name="login_create_pin_title">Create a PIN</string>
+    <string name="login_confirm_pin_title">Confirm your PIN</string>
+    <string name="login_biometric_checkbox_label">Use fingerprint or face ID</string>
+    <string name="login_pin_mismatch_error">PINs do not match. Please try again.</string>
+
+    <!-- Login screen -->
+    <string name="login_title">Enter your PIN</string>
+    <string name="login_biometric_button_description">Authenticate with fingerprint or face ID</string>
+    <string name="login_use_pin_instead">Use PIN instead</string>
+    <string name="login_incorrect_pin_error">Incorrect PIN. Please try again.</string>
+    <string name="login_biometric_failed_error">Biometric authentication failed. Use your PIN.</string>
+
+    <!-- Biometric not enrolled -->
+    <string name="login_biometric_not_enrolled_title">Set up biometrics</string>
+    <string name="login_biometric_not_enrolled_message">To use fingerprint or face ID, please set up biometrics in your device settings first.</string>
+    <string name="login_biometric_open_settings">Open Settings</string>
+    <string name="login_biometric_skip">Skip for now</string>
+</resources>

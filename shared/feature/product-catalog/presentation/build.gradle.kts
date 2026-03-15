@@ -37,6 +37,7 @@ kotlin {
             implementation(libs.lifecycle.viewmodel)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.core)
+            implementation(libs.kotlinx.collections.immutable)
 
             // moko-resources
             implementation(libs.moko.resources.core)
@@ -47,6 +48,7 @@ kotlin {
             implementation(projects.shared.core.testing)
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.kotlinx.collections.immutable)
             implementation(libs.mockk)
         }
     }

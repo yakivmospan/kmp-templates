@@ -13,24 +13,27 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogHomeEvent
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogHomeState
 import com.yakivmospan.templates.feature.productcatalog.presentation.home.ProductCatalogHomeViewModel
 import com.yakivmospan.templates.presentation.theme.AppTheme
+import dev.icerock.moko.resources.compose.stringResource
 import org.koin.androidx.compose.koinViewModel
 
-// --- Stateful entry point ---
+// ─────────────────────────────────────────────────────────────────────────────
+// Public overload — ViewModel-connected
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ProductCatalogHomeScreen(
-    innerPadding: PaddingValues,
-    viewModel: ProductCatalogHomeViewModel = koinViewModel()
+    viewModel: ProductCatalogHomeViewModel = koinViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle()
 
-    ProductCatalogHomeContent(
+    ProductCatalogHomeScreen(
         state = state.value,
         onEvent = viewModel::onEvent,
         content = { scaffoldPadding ->
@@ -48,13 +51,15 @@ fun ProductCatalogHomeScreen(
     )
 }
 
-// --- Stateless / hoisted composable ---
+// ─────────────────────────────────────────────────────────────────────────────
+// Private overload — stateless, Preview-friendly
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-fun ProductCatalogHomeContent(
+private fun ProductCatalogHomeScreen(
     state: ProductCatalogHomeState,
     onEvent: (ProductCatalogHomeEvent) -> Unit,
-    content: @Composable (PaddingValues) -> Unit = {}
+    content: @Composable (PaddingValues) -> Unit = {},
 ) {
     Scaffold(
         bottomBar = {
@@ -65,10 +70,10 @@ fun ProductCatalogHomeContent(
                     icon = {
                         Icon(
                             imageVector = Icons.Default.ShoppingBag,
-                            contentDescription = "Catalog"
+                            contentDescription = stringResource(MR.strings.pd_catalog_feature_catalog_tab)
                         )
                     },
-                    label = { Text(text = "Catalog") }
+                    label = { Text(text = stringResource(MR.strings.pd_catalog_feature_catalog_tab)) }
                 )
                 NavigationBarItem(
                     selected = state.selectedTabIndex == 1,
@@ -76,10 +81,10 @@ fun ProductCatalogHomeContent(
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Favorite,
-                            contentDescription = "Favorites"
+                            contentDescription = stringResource(MR.strings.pd_catalog_feature_favorites_tab)
                         )
                     },
-                    label = { Text(text = "Favorites") }
+                    label = { Text(text = stringResource(MR.strings.pd_catalog_feature_favorites_tab)) }
                 )
             }
         }
@@ -88,13 +93,15 @@ fun ProductCatalogHomeContent(
     }
 }
 
-// --- Previews ---
+// ─────────────────────────────────────────────────────────────────────────────
+// Previews
+// ─────────────────────────────────────────────────────────────────────────────
 
-@Preview(name = "Home – Catalog tab selected", showBackground = true)
+@PreviewLightDark
 @Composable
 private fun PreviewCatalogTabSelected() {
     AppTheme {
-        ProductCatalogHomeContent(
+        ProductCatalogHomeScreen(
             state = ProductCatalogHomeState(selectedTabIndex = 0),
             onEvent = {},
             content = { Box(modifier = Modifier.fillMaxSize()) }
@@ -102,15 +109,14 @@ private fun PreviewCatalogTabSelected() {
     }
 }
 
-@Preview(name = "Home – Favorites tab selected", showBackground = true)
+@PreviewLightDark
 @Composable
 private fun PreviewFavoritesTabSelected() {
     AppTheme {
-        ProductCatalogHomeContent(
+        ProductCatalogHomeScreen(
             state = ProductCatalogHomeState(selectedTabIndex = 1),
             onEvent = {},
             content = { Box(modifier = Modifier.fillMaxSize()) }
         )
     }
 }
-

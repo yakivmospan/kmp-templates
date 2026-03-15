@@ -1,8 +1,8 @@
 package com.yakivmospan.templates.feature.productcatalog.presentation.favorites
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yakivmospan.templates.core.navigation.Navigator
+import com.yakivmospan.templates.core.presentation.ViewModel
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
@@ -10,14 +10,12 @@ import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCata
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogNavigationTargets
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
-import dev.icerock.moko.resources.desc.StringDesc
 import dev.icerock.moko.resources.desc.desc
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
@@ -25,7 +23,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
@@ -33,16 +30,10 @@ class ProductFavoritesViewModel(
     private val navigator: Navigator,
     private val observeFavoritesUseCase: ObserveFavoritesUseCase,
     private val viewDataMapper: ProductToViewDataMapper
-) : ViewModel() {
-
-    private val _state = MutableStateFlow(ProductFavoritesState())
-    val state: StateFlow<ProductFavoritesState> = _state.asStateFlow()
+) : ViewModel<ProductFavoritesEvent, ProductFavoritesState, ProductFavoritesSideEffect>(ProductFavoritesState()) {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _errorEvent = MutableSharedFlow<StringDesc>(extraBufferCapacity = 1)
-    val errorEvent = _errorEvent.asSharedFlow()
 
     // Store all favorites for filtering
     private var allFavorites: List<ProductViewData> = emptyList()
@@ -53,7 +44,7 @@ class ProductFavoritesViewModel(
         observeSearchQuery()
     }
 
-    fun onEvent(event: ProductFavoritesEvent) {
+    override fun onEvent(event: ProductFavoritesEvent) {
         when (event) {
             is ProductFavoritesEvent.SelectProduct -> onSelectProduct(event.productId)
             is ProductFavoritesEvent.Retry -> observeFavorites()
@@ -65,7 +56,7 @@ class ProductFavoritesViewModel(
     private fun observeFavorites() {
         observeFavoritesJob?.cancel()
         observeFavoritesJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            updateState { it.copy(isLoading = true) }
             observeFavoritesUseCase()
                 .catch { onFavoritesLoadError(it) }
                 .collect { onFavoritesChanged(it) }
@@ -79,18 +70,22 @@ class ProductFavoritesViewModel(
 
         val filteredFavorites = filterFavorites(_searchQuery.value)
 
-        _state.update {
+        updateState {
             it.copy(
-                favorites = allFavorites,
-                searchResult = filteredFavorites,
+                favorites = allFavorites.toImmutableList(),
+                searchResult = filteredFavorites.toImmutableList(),
                 isLoading = false
             )
         }
     }
 
     private fun onFavoritesLoadError(exception: Throwable) {
-        _state.update { it.copy(isLoading = false) }
-        _errorEvent.tryEmit(exception.message?.desc() ?: MR.strings.pd_catalog_feature_generic_error_message.desc())
+        updateState { it.copy(isLoading = false) }
+        emitSideEffect(
+            ProductFavoritesSideEffect.ShowError(
+                exception.message?.desc() ?: MR.strings.pd_catalog_feature_generic_error_message.desc()
+            )
+        )
     }
 
     // Search functionality
@@ -98,7 +93,7 @@ class ProductFavoritesViewModel(
         _searchQuery
             .drop(1)
             // Show loading before debounce to provide immediate feedback
-            .onEach { _state.update { it.copy(isSearching = true) } }
+            .onEach { updateState { it.copy(isSearching = true) } }
             .debounce(ProductCatalogConfig.SEARCH_DEBOUNCE_MS)
             .distinctUntilChanged()
             .collectLatest { query ->
@@ -115,13 +110,13 @@ class ProductFavoritesViewModel(
     }
 
     private fun performSearch(query: String) {
-        _state.update { it.copy(isSearching = true) }
+        updateState { it.copy(isSearching = true) }
 
         val filteredResults = filterFavorites(query)
 
-        _state.update {
+        updateState {
             it.copy(
-                searchResult = filteredResults,
+                searchResult = filteredResults.toImmutableList(),
                 isSearching = false
             )
         }

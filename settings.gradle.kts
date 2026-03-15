@@ -44,6 +44,12 @@ include(":shared:core:network")
 include(":shared:core:navigation")
 include(":shared:core:di")
 
+// Login Feature Modules
+include(":shared:feature:login:domain")
+include(":shared:feature:login:data")
+include(":shared:feature:login:presentation")
+include(":shared:feature:login:di")
+
 // Product Catalog Feature Modules
 include(":shared:feature:product-catalog:domain")
 include(":shared:feature:product-catalog:data")

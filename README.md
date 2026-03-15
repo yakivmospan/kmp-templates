@@ -92,7 +92,7 @@ Technologies used:
 # Trade-offs
 
 - Hardcoded values may be found over some places.
-- UI is mostly done with AI and its code was not properly reviewed, only manually tested and iterated over.
+- UI/UX is simplified and could be improved in many places.
 - Product feature is simplified to use one ViewData for all screens.
 - There is no UI Module separation yet, we assume we are still in the early stages of the project. Focus on features and shared
   code.

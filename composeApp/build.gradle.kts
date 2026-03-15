@@ -25,6 +25,10 @@ kotlin {
             implementation(projects.shared.feature.productCatalog.presentation)
             implementation(projects.shared.feature.productCatalog.di)
 
+            // Login modules
+            implementation(projects.shared.feature.login.presentation)
+            implementation(projects.shared.feature.login.di)
+
             // AndroidX Compose BOM
             implementation(project.dependencies.platform(libs.androidx.compose.bom))
             implementation(libs.androidx.compose.ui)
@@ -48,6 +52,9 @@ kotlin {
             implementation(libs.androidx.compose.material.icons.extended)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtime.compose)
+
+            // KotlinX
+            implementation(libs.kotlinx.collections.immutable)
 
             // Coil
             implementation(libs.coil.compose)

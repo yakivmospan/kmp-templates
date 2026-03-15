@@ -25,6 +25,7 @@ kotlin = "2.3.10"
 # New versions for KMP architecture
 kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.10.0"
+kotlinxCollectionsImmutable = "0.3.8"
 ktor = "3.4.0"
 koin = "4.1.1"
 coil = "3.3.0"
@@ -75,6 +76,7 @@ compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-previ
 # Coroutines
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 
 # Serialization
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }

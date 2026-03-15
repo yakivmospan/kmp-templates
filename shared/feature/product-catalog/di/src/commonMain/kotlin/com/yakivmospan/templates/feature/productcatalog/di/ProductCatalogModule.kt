@@ -17,7 +17,7 @@ import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFa
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ToggleFavoriteUseCase
 import com.yakivmospan.templates.feature.productcatalog.presentation.home.ProductCatalogHomeViewModel
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper

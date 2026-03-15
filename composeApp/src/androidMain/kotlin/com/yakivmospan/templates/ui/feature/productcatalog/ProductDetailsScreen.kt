@@ -1,10 +1,10 @@
 package com.yakivmospan.templates.ui.feature.productcatalog
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -41,9 +40,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -52,20 +51,27 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
-import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsEvent
-import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsSideEffect
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsState
+import com.yakivmospan.templates.feature.productcatalog.presentation.details.ProductDetailsViewModel
+import com.yakivmospan.templates.presentation.theme.AppTheme
+import com.yakivmospan.templates.ui.utils.CollectSideEffects
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import dev.icerock.moko.resources.desc.desc
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Public overload — ViewModel-connected
+// ─────────────────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailsScreen(
     productId: Int,
-    innerPadding: PaddingValues,
     viewModel: ProductDetailsViewModel = koinViewModel {
         parametersOf(productId)
     }
@@ -74,32 +80,66 @@ fun ProductDetailsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
     val context = LocalContext.current
+    val onEvent: (ProductDetailsEvent) -> Unit = viewModel::onEvent
 
-    // Handle error display in Snackbar (only when product is loaded)
-    LaunchedEffect(Unit) {
-        viewModel.errorEvent.collect { error ->
-            // Only show snackbar if we have a product (for refresh errors)
-            if (state.value.product != null) {
-                val result = snackbarHostState.showSnackbar(
-                    message = error.toString(context),
-                    actionLabel = retryButtonLabel,
-                    duration = SnackbarDuration.Long
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    viewModel.onEvent(ProductDetailsEvent.Retry)
-                }
-            }
+    CollectSideEffects(viewModel.sideEffects) { sideEffect ->
+        when (sideEffect) {
+            is ProductDetailsSideEffect.ShowError -> handleShowError(
+                sideEffect = sideEffect,
+                snackbarHostState = snackbarHostState,
+                retryButtonLabel = retryButtonLabel,
+                context = context,
+                onEvent = onEvent,
+            )
         }
     }
 
+    ProductDetailsScreen(
+        state = state.value,
+        snackbarHostState = snackbarHostState,
+        onEvent = onEvent,
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Side effects
+// ─────────────────────────────────────────────────────────────────────────────
+
+private suspend fun handleShowError(
+    sideEffect: ProductDetailsSideEffect.ShowError,
+    snackbarHostState: SnackbarHostState,
+    retryButtonLabel: String,
+    context: Context,
+    onEvent: (ProductDetailsEvent) -> Unit,
+) {
+    val result = snackbarHostState.showSnackbar(
+        message = sideEffect.message.toString(context),
+        actionLabel = retryButtonLabel,
+        duration = SnackbarDuration.Long
+    )
+    if (result == SnackbarResult.ActionPerformed) {
+        onEvent(ProductDetailsEvent.Retry)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private overload — stateless, Preview-friendly
+// ─────────────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductDetailsScreen(
+    state: ProductDetailsState,
+    snackbarHostState: SnackbarHostState,
+    onEvent: (ProductDetailsEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = state.value.product?.title ?: "") },
+                title = { Text(text = state.product?.title ?: "") },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.onEvent(ProductDetailsEvent.NavigateBack)
-                    }) {
+                    IconButton(onClick = { onEvent(ProductDetailsEvent.NavigateBack) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(MR.strings.pd_catalog_feature_navigate_back_accessibility)
@@ -128,19 +168,18 @@ fun ProductDetailsScreen(
                 }
             )
         },
-        modifier = Modifier.padding(innerPadding)
+        modifier = modifier,
     ) { scaffoldPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding)
         ) {
-
-            val product = state.value.product
+            val product = state.product
 
             when {
                 // Loading state (initial load only)
-                state.value.isLoading && product == null -> {
+                state.isLoading && product == null -> {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -151,10 +190,8 @@ fun ProductDetailsScreen(
                 // Content state with PullToRefresh
                 product != null -> {
                     PullToRefreshBox(
-                        isRefreshing = state.value.isLoading,
-                        onRefresh = {
-                            viewModel.onEvent(ProductDetailsEvent.Retry)
-                        },
+                        isRefreshing = state.isLoading,
+                        onRefresh = { onEvent(ProductDetailsEvent.Retry) },
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Column(
@@ -165,26 +202,21 @@ fun ProductDetailsScreen(
                             // Image section with FAB
                             ProductImageSection(
                                 product = product,
-                                onToggleFavorite = {
-                                    viewModel.onEvent(ProductDetailsEvent.ToggleFavorite)
-                                }
+                                onToggleFavorite = { onEvent(ProductDetailsEvent.ToggleFavorite) }
                             )
 
                             // Details section
-                            ProductDetailsSection(
-                                product = product
-                            )
+                            ProductDetailsSection(product = product)
                         }
                     }
                 }
 
                 // Error state (failed to load product)
-                !state.value.isLoading -> {
+                !state.isLoading -> {
                     ErrorState(
-                        errorMessage = MR.strings.pd_catalog_feature_generic_error_message.desc().localized(),
-                        onRetry = {
-                            viewModel.onEvent(ProductDetailsEvent.Retry)
-                        },
+                        errorMessage = state.errorMessage?.localized()
+                            ?: MR.strings.pd_catalog_feature_generic_error_message.desc().localized(),
+                        onRetry = { onEvent(ProductDetailsEvent.Retry) },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -315,26 +347,55 @@ private fun ErrorState(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Previews
+// ─────────────────────────────────────────────────────────────────────────────
+
+@PreviewLightDark
 @Composable
-private fun EmptyProductState(
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Filled.BrokenImage,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = stringResource(MR.strings.pd_catalog_feature_product_not_found_error),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
+private fun ProductDetailsScreenLoadingPreview() {
+    AppTheme {
+        ProductDetailsScreen(
+            state = ProductDetailsState(isLoading = true),
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
         )
     }
 }
+
+@PreviewLightDark
+@Composable
+private fun ProductDetailsScreenLoadedPreview() {
+    AppTheme {
+        ProductDetailsScreen(
+            state = ProductDetailsState(
+                product = ProductViewData(
+                    id = 1,
+                    title = "Wireless Headphones",
+                    description = "Premium noise-cancelling wireless headphones with 30-hour battery life and exceptional sound quality.",
+                    price = 299.99,
+                    formattedPrice = "$299.99",
+                    imageUrl = "",
+                    isFavorite = false,
+                )
+            ),
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductDetailsScreenErrorPreview() {
+    AppTheme {
+        ProductDetailsScreen(
+            state = ProductDetailsState(
+                errorMessage = "Network error. Please check your connection.".desc()
+            ),
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+

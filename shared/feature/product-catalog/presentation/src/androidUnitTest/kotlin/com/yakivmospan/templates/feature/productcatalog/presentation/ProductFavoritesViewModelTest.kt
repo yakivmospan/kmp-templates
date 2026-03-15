@@ -3,6 +3,7 @@ package com.yakivmospan.templates.feature.productcatalog.presentation
 import com.yakivmospan.templates.core.navigation.Navigator
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.ObserveFavoritesUseCase
 import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesSideEffect
 import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesState
 import com.yakivmospan.templates.feature.productcatalog.presentation.favorites.ProductFavoritesViewModel
 import dev.icerock.moko.resources.desc.RawStringDesc
@@ -12,6 +13,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -20,6 +23,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.collections.emptyList
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -60,8 +64,8 @@ class ProductFavoritesViewModelTest() {
 
         // Then
         val expectedState = ProductFavoritesState(
-            favorites = emptyList(),
-            searchResult = emptyList(),
+            favorites = persistentListOf<ProductViewData>(),
+            searchResult = persistentListOf<ProductViewData>(),
             isLoading = false,
             isSearching = false
         )
@@ -81,7 +85,7 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        val expectedFavorites = products.map { viewDataMapper.map(it) }
+        val expectedFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = expectedFavorites,
             searchResult = expectedFavorites,
@@ -125,7 +129,11 @@ class ProductFavoritesViewModelTest() {
         val viewModel = ProductFavoritesViewModel(navigator, observeFavoritesUseCase, viewDataMapper)
 
         val collectJob = launch {
-            viewModel.errorEvent.collect { emittedError = it }
+            viewModel.sideEffects.collect { sideEffect ->
+                if (sideEffect is ProductFavoritesSideEffect.ShowError) {
+                    emittedError = sideEffect.message
+                }
+            }
         }
         testDispatcher.scheduler.runCurrent() // let collector subscribe
 
@@ -156,7 +164,7 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        val expectedFavorites = products.map { viewDataMapper.map(it) }
+        val expectedFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = expectedFavorites,
             searchResult = expectedFavorites,
@@ -188,11 +196,11 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then - After debounce, search is complete
-        val allFavorites = products.map { viewDataMapper.map(it) }
+        val allFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val filteredResults = allFavorites.filter {
             it.title.lowercase().contains("smartphone") ||
                     it.description.lowercase().contains("smartphone")
-        }
+        }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
             searchResult = filteredResults,
@@ -232,11 +240,11 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then - Only "headphones" query should be processed
-        val allFavorites = products.map { viewDataMapper.map(it) }
+        val allFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val filteredResults = allFavorites.filter {
             it.title.lowercase().contains("headphones") ||
                     it.description.lowercase().contains("headphones")
-        }
+        }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
             searchResult = filteredResults,
@@ -294,7 +302,7 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        val allFavorites = products.map { viewDataMapper.map(it) }
+        val allFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
             searchResult = allFavorites,
@@ -324,7 +332,7 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        val allFavorites = products.map { viewDataMapper.map(it) }
+        val allFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
             searchResult = allFavorites,
@@ -350,10 +358,10 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        val allFavorites = products.map { viewDataMapper.map(it) }
+        val allFavorites = products.map { viewDataMapper.map(it) }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
-            searchResult = emptyList(),
+            searchResult = persistentListOf<ProductViewData>(),
             isLoading = false,
             isSearching = false
         )
@@ -383,8 +391,8 @@ class ProductFavoritesViewModelTest() {
 
         // State should remain unchanged
         val expectedState = ProductFavoritesState(
-            favorites = emptyList(),
-            searchResult = emptyList(),
+            favorites = persistentListOf<ProductViewData>(),
+            searchResult = persistentListOf<ProductViewData>(),
             isLoading = false,
             isSearching = false
         )
@@ -420,11 +428,11 @@ class ProductFavoritesViewModelTest() {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then - Search filter should be re-applied to new favorites
-        val allFavorites = updatedProducts.map { viewDataMapper.map(it) }
+        val allFavorites = updatedProducts.map { viewDataMapper.map(it) }.toImmutableList()
         val filteredResults = allFavorites.filter {
             it.title.lowercase().contains("phone") ||
                     it.description.lowercase().contains("phone")
-        }
+        }.toImmutableList()
         val expectedState = ProductFavoritesState(
             favorites = allFavorites,
             searchResult = filteredResults,
@@ -460,9 +468,9 @@ class ProductFavoritesViewModelTest() {
         // Then - search should complete
         val filteredResults = products.map { viewDataMapper.map(it) }.filter {
             it.title.lowercase().contains("laptop") || it.description.lowercase().contains("laptop")
-        }
+        }.toImmutableList()
         val expectedState = ProductFavoritesState(
-            favorites = products.map { viewDataMapper.map(it) },
+            favorites = products.map { viewDataMapper.map(it) }.toImmutableList(),
             searchResult = filteredResults,
             isLoading = false,
             isSearching = false

@@ -1,34 +1,33 @@
-package com.yakivmospan.templates.feature.productcatalog.presentation
+package com.yakivmospan.templates.feature.productcatalog.presentation.catalog
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yakivmospan.templates.core.common.PageRequest
 import com.yakivmospan.templates.core.common.PaginatedData
 import com.yakivmospan.templates.core.common.Result
 import com.yakivmospan.templates.core.domain.DomainException
 import com.yakivmospan.templates.core.navigation.Navigator
+import com.yakivmospan.templates.core.presentation.ViewModel
 import com.yakivmospan.templates.feature.productcatalog.domain.model.Product
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.GetProductsUseCase
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsParams
 import com.yakivmospan.templates.feature.productcatalog.domain.usecase.SearchProductsUseCase
+import com.yakivmospan.templates.feature.productcatalog.presentation.MR
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig.PAGE_PAGINATION_SIZE
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogConfig.SEARCH_DEBOUNCE_MS
-import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogEvent
-import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogState
-import dev.icerock.moko.resources.desc.StringDesc
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogNavigationTargets
+import com.yakivmospan.templates.feature.productcatalog.presentation.ProductToViewDataMapper
 import dev.icerock.moko.resources.desc.desc
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
@@ -37,23 +36,17 @@ class ProductCatalogViewModel(
     private val getProductsUseCase: GetProductsUseCase,
     private val searchProductsUseCase: SearchProductsUseCase,
     private val viewDataMapper: ProductToViewDataMapper
-) : ViewModel() {
-
-    private val _state = MutableStateFlow(ProductCatalogState())
-    val state: StateFlow<ProductCatalogState> = _state.asStateFlow()
+) : ViewModel<ProductCatalogEvent, ProductCatalogState, ProductCatalogSideEffect>(ProductCatalogState()) {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _errorEvent = MutableSharedFlow<StringDesc>(extraBufferCapacity = 1)
-    val errorEvent = _errorEvent.asSharedFlow()
 
     init {
         loadProducts()
         observeSearchQuery()
     }
 
-    fun onEvent(event: ProductCatalogEvent) {
+    override fun onEvent(event: ProductCatalogEvent) {
         when (event) {
             is ProductCatalogEvent.LoadPage -> loadProducts(page = event.page)
             is ProductCatalogEvent.LoadNextPage -> onLoadNextPageEvent()
@@ -67,7 +60,7 @@ class ProductCatalogViewModel(
     // Product Loading & Pagination
     private fun loadProducts(page: Int = 1) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            updateState { it.copy(isLoading = true) }
 
             val pageRequest = PageRequest(page = page, pageSize = PAGE_PAGINATION_SIZE)
             when (val result = getProductsUseCase(pageRequest)) {
@@ -77,9 +70,9 @@ class ProductCatalogViewModel(
         }
     }
 
-    private fun onLoadProductsSuccess(result: Result.Success<PaginatedData<Product>>) = _state.update {
+    private fun onLoadProductsSuccess(result: Result.Success<PaginatedData<Product>>) = updateState {
         it.copy(
-            products = result.data.items.map { item -> viewDataMapper.map(item) },
+            products = result.data.items.map { item -> viewDataMapper.map(item) }.toImmutableList(),
             isLoading = false,
             currentPage = result.data.currentPage,
             totalPages = result.data.totalPages,
@@ -89,16 +82,16 @@ class ProductCatalogViewModel(
     }
 
     private fun onLoadProductsError(result: Result.Error) {
-        _state.update { it.copy(isLoading = false) }
-        _errorEvent.tryEmit(mapErrorMessage(result.exception))
+        updateState { it.copy(isLoading = false) }
+        emitSideEffect(ProductCatalogSideEffect.ShowError(mapErrorMessage(result.exception)))
     }
 
     private fun onLoadNextPageEvent() {
-        val currentState = _state.value
+        val currentState = state.value
         if (!currentState.hasNextPage || currentState.isLoading) return
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            updateState { it.copy(isLoading = true) }
 
             val nextPage = currentState.currentPage + 1
             val pageRequest = PageRequest(page = nextPage, pageSize = PAGE_PAGINATION_SIZE)
@@ -112,9 +105,9 @@ class ProductCatalogViewModel(
     private fun loadNextPageSuccess(
         currentState: ProductCatalogState,
         result: Result.Success<PaginatedData<Product>>
-    ) = _state.update {
+    ) = updateState {
         it.copy(
-            products = currentState.products + result.data.items.map { item -> viewDataMapper.map(item) },
+            products = (currentState.products + result.data.items.map { item -> viewDataMapper.map(item) }).toImmutableList(),
             isLoading = false,
             currentPage = result.data.currentPage,
             totalPages = result.data.totalPages,
@@ -124,12 +117,12 @@ class ProductCatalogViewModel(
     }
 
     private fun loadNextPageError(result: Result.Error) {
-        _state.update { it.copy(isLoading = false) }
-        _errorEvent.tryEmit(mapErrorMessage(result.exception))
+        updateState { it.copy(isLoading = false) }
+        emitSideEffect(ProductCatalogSideEffect.ShowError(mapErrorMessage(result.exception)))
     }
 
     private suspend fun searchProducts(query: String) {
-        _state.update { it.copy(isSearching = true) }
+        updateState { it.copy(isSearching = true) }
 
         val params = SearchProductsParams(
             query = query,
@@ -141,21 +134,21 @@ class ProductCatalogViewModel(
         }
     }
 
-    private fun onSearchSuccess(result: Result.Success<PaginatedData<Product>>) = _state.update {
+    private fun onSearchSuccess(result: Result.Success<PaginatedData<Product>>) = updateState {
         it.copy(
-            searchResult = result.data.items.map { item -> viewDataMapper.map(item) },
+            searchResult = result.data.items.map { item -> viewDataMapper.map(item) }.toImmutableList(),
             isSearching = false
         )
     }
 
     private fun onSearchError(result: Result.Error) {
-        _state.update {
+        updateState {
             it.copy(
-                searchResult = emptyList(),
+                searchResult = persistentListOf(),
                 isSearching = false,
             )
         }
-        _errorEvent.tryEmit(mapErrorMessage(result.exception))
+        emitSideEffect(ProductCatalogSideEffect.ShowError(mapErrorMessage(result.exception)))
     }
 
     // Search
@@ -163,7 +156,7 @@ class ProductCatalogViewModel(
         _searchQuery
             .drop(1)
             // Show loading before debounce to provide immediate feedback
-            .onEach { _state.update { it.copy(isSearching = true) } }
+            .onEach { updateState { it.copy(isSearching = true) } }
             .debounce(SEARCH_DEBOUNCE_MS)
             .distinctUntilChanged()
             .collectLatest { query ->
@@ -177,17 +170,20 @@ class ProductCatalogViewModel(
 
     private fun onSearchEvent(event: ProductCatalogEvent.SearchProducts) {
         _searchQuery.value = event.query
+        updateState { it.copy(isSearchMode = event.query.isNotBlank()) }
     }
 
     private fun onClearSearchEvent() {
         _searchQuery.value = ""
+        updateState { it.copy(isSearchMode = false) }
     }
 
     private fun clearSearchResults() {
-        _state.update {
+        updateState {
             it.copy(
-                searchResult = emptyList(),
-                isSearching = false
+                searchResult = persistentListOf(),
+                isSearching = false,
+                isSearchMode = false,
             )
         }
     }
@@ -199,7 +195,7 @@ class ProductCatalogViewModel(
                 searchProducts(_searchQuery.value)
             }
         } else {
-            loadProducts(page = _state.value.currentPage)
+            loadProducts(page = state.value.currentPage)
         }
     }
 

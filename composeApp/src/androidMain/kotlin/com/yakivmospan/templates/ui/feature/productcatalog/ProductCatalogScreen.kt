@@ -1,5 +1,6 @@
 package com.yakivmospan.templates.ui.feature.productcatalog
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,14 +31,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yakivmospan.templates.feature.productcatalog.presentation.MR
-import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogEvent
-import com.yakivmospan.templates.feature.productcatalog.presentation.ProductCatalogViewModel
 import com.yakivmospan.templates.feature.productcatalog.presentation.ProductViewData
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogEvent
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogSideEffect
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogState
+import com.yakivmospan.templates.feature.productcatalog.presentation.catalog.ProductCatalogViewModel
+import com.yakivmospan.templates.presentation.theme.AppTheme
+import com.yakivmospan.templates.ui.utils.CollectSideEffects
 import dev.icerock.moko.resources.compose.stringResource
+import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public overload — ViewModel-connected
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ProductCatalogScreen(
@@ -47,23 +58,65 @@ fun ProductCatalogScreen(
     val state = productCatalogViewModel.state.collectAsStateWithLifecycle()
     val searchQuery = productCatalogViewModel.searchQuery.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val onEvent: (ProductCatalogEvent) -> Unit = productCatalogViewModel::onEvent
     val retryButtonLabel = stringResource(MR.strings.pd_catalog_feature_retry_button)
     val context = LocalContext.current
 
-    // Handle error display in Snackbar
-    LaunchedEffect(Unit) {
-        productCatalogViewModel.errorEvent.collect { error ->
-            val result = snackbarHostState.showSnackbar(
-                message = error.toString(context),
-                actionLabel = retryButtonLabel,
-                duration = SnackbarDuration.Long
+    CollectSideEffects(productCatalogViewModel.sideEffects) { sideEffect ->
+        when (sideEffect) {
+            is ProductCatalogSideEffect.ShowError -> handleShowError(
+                sideEffect = sideEffect,
+                snackbarHostState = snackbarHostState,
+                retryButtonLabel = retryButtonLabel,
+                context = context,
+                onEvent = onEvent,
             )
-            if (result == SnackbarResult.ActionPerformed) {
-                productCatalogViewModel.onEvent(ProductCatalogEvent.Retry)
-            }
         }
     }
 
+    ProductCatalogScreen(
+        innerPadding = innerPadding,
+        state = state.value,
+        searchQuery = searchQuery.value,
+        snackbarHostState = snackbarHostState,
+        onEvent = onEvent,
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Side effects
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+private suspend fun handleShowError(
+    sideEffect: ProductCatalogSideEffect.ShowError,
+    snackbarHostState: SnackbarHostState,
+    retryButtonLabel: String,
+    context: Context,
+    onEvent: (ProductCatalogEvent) -> Unit,
+) {
+    val result = snackbarHostState.showSnackbar(
+        message = sideEffect.message.toString(context),
+        actionLabel = retryButtonLabel,
+        duration = SnackbarDuration.Long
+    )
+    if (result == SnackbarResult.ActionPerformed) {
+        onEvent(ProductCatalogEvent.Retry)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private overload — stateless, Preview-friendly
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ProductCatalogScreen(
+    innerPadding: PaddingValues,
+    state: ProductCatalogState,
+    searchQuery: String,
+    snackbarHostState: SnackbarHostState,
+    onEvent: (ProductCatalogEvent) -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -75,29 +128,16 @@ fun ProductCatalogScreen(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Search Bar - using shared component
+            // Search Bar — generic reusable component
             SearchBar(
-                query = searchQuery.value,
-                isSearching = state.value.isSearching,
-                onQueryChange = { query ->
-                    productCatalogViewModel.onEvent(ProductCatalogEvent.SearchProducts(query))
-                },
-                onClearClick = {
-                    productCatalogViewModel.onEvent(ProductCatalogEvent.ClearSearch)
-                },
+                query = searchQuery,
+                isSearching = state.isSearching,
+                onQueryChange = { query -> onEvent(ProductCatalogEvent.SearchProducts(query)) },
+                onClearClick = { onEvent(ProductCatalogEvent.ClearSearch) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
-
-            val isSearchMode = searchQuery.value.isNotBlank()
-
-            // Determine which items to display
-            val displayItems = if (isSearchMode) {
-                state.value.searchResult
-            } else {
-                state.value.products
-            }
 
             // Content Area - Handle loading, empty, and content states
             Box(
@@ -107,10 +147,10 @@ fun ProductCatalogScreen(
             ) {
                 when {
                     // Loading state (initial load)
-                    state.value.isLoading && displayItems.isEmpty() -> {
+                    state.isLoading && state.displayItems.isEmpty() -> {
                         LoadingState(
                             modifier = Modifier.align(Alignment.Center),
-                            message = if (isSearchMode) {
+                            message = if (state.isSearchMode) {
                                 stringResource(MR.strings.pd_catalog_feature_searching_label)
                             } else {
                                 stringResource(MR.strings.pd_catalog_feature_loading_products_label)
@@ -119,29 +159,19 @@ fun ProductCatalogScreen(
                     }
 
                     // Empty state (no products found)
-                    displayItems.isEmpty() && !state.value.isLoading && !state.value.isSearching -> {
+                    state.displayItems.isEmpty() && !state.isLoading && !state.isSearching -> {
                         EmptyState(
                             modifier = Modifier.align(Alignment.Center),
-                            isSearchActive = isSearchMode,
-                            searchQuery = searchQuery.value
+                            isSearchActive = state.isSearchMode,
+                            searchQuery = searchQuery
                         )
                     }
 
                     // Content state (has products)
                     else -> {
                         ProductList(
-                            displayItems = displayItems,
-                            isSearchMode = isSearchMode,
-                            isLoading = state.value.isLoading,
-                            hasNextPage = state.value.hasNextPage,
-                            onProductClick = { productId ->
-                                productCatalogViewModel.onEvent(
-                                    ProductCatalogEvent.SelectProduct(productId)
-                                )
-                            },
-                            onLoadNextPage = {
-                                productCatalogViewModel.onEvent(ProductCatalogEvent.LoadNextPage)
-                            }
+                            state = state,
+                            onEvent = onEvent,
                         )
                     }
                 }
@@ -166,15 +196,20 @@ fun ProductCatalogScreen(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun ProductList(
-    displayItems: List<ProductViewData>,
-    isSearchMode: Boolean,
-    isLoading: Boolean,
-    hasNextPage: Boolean,
-    onProductClick: (Int) -> Unit,
-    onLoadNextPage: () -> Unit
+    state: ProductCatalogState,
+    onEvent: (ProductCatalogEvent) -> Unit,
 ) {
+    val isSearchMode = state.isSearchMode
+    val displayItems = state.displayItems
+    val isLoading = state.isLoading
+    val hasNextPage = state.hasNextPage
+
     val listState = rememberLazyListState()
 
 
@@ -191,7 +226,7 @@ private fun ProductList(
 
     LaunchedEffect(isNearBottom, isSearchMode, isLoading, hasNextPage) {
         if (isNearBottom && !isSearchMode && hasNextPage && !isLoading) {
-            onLoadNextPage()
+            onEvent(ProductCatalogEvent.LoadNextPage)
         }
     }
 
@@ -205,10 +240,9 @@ private fun ProductList(
             items = displayItems,
             key = { product -> product.id }
         ) { product ->
-            // Using shared ProductCard component
             ProductCard(
                 product = product,
-                onClick = { onProductClick(product.id) }
+                onClick = { onEvent(ProductCatalogEvent.SelectProduct(product.id)) }
             )
         }
 
@@ -242,5 +276,76 @@ private fun ProductList(
                 )
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Previews
+// ─────────────────────────────────────────────────────────────────────────────
+
+private val previewProducts = persistentListOf(
+    ProductViewData(id = 1, title = "Smartphone Pro", description = "Latest flagship model", price = 999.99, formattedPrice = "$999.99", imageUrl = "", isFavorite = false),
+    ProductViewData(id = 2, title = "Wireless Headphones", description = "Noise cancelling", price = 199.99, formattedPrice = "$199.99", imageUrl = "", isFavorite = true),
+    ProductViewData(id = 3, title = "Laptop Ultra", description = "Thin and light", price = 1299.99, formattedPrice = "$1299.99", imageUrl = "", isFavorite = false),
+)
+
+@PreviewLightDark
+@Composable
+private fun ProductCatalogScreenLoadingPreview() {
+    AppTheme {
+        ProductCatalogScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductCatalogState(isLoading = true),
+            searchQuery = "",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductCatalogScreenEmptyPreview() {
+    AppTheme {
+        ProductCatalogScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductCatalogState(),
+            searchQuery = "",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductCatalogScreenLoadedPreview() {
+    AppTheme {
+        ProductCatalogScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductCatalogState(products = previewProducts, hasNextPage = true),
+            searchQuery = "",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ProductCatalogScreenEmptySearchPreview() {
+    AppTheme {
+        ProductCatalogScreen(
+            innerPadding = PaddingValues(0.dp),
+            state = ProductCatalogState(
+                products = previewProducts,
+                searchResult = persistentListOf(),
+                isSearchMode = true,
+                isSearching = false,
+            ),
+            searchQuery = "xyz",
+            snackbarHostState = SnackbarHostState(),
+            onEvent = {},
+        )
     }
 }
