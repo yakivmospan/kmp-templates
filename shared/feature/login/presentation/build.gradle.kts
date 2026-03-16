@@ -31,6 +31,7 @@ kotlin {
             implementation(projects.shared.core.domain)
             implementation(projects.shared.core.presentation)
             implementation(projects.shared.core.navigation)
+            implementation(projects.shared.core.biometrics)
             implementation(projects.shared.feature.login.domain)
 
             // Other common dependencies

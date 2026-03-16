@@ -29,6 +29,7 @@ kotlin {
             implementation(projects.shared.core.domain)
             implementation(projects.shared.core.data)
             implementation(projects.shared.core.navigation)
+            implementation(projects.shared.core.biometrics)
 
             implementation(projects.shared.feature.login.domain)
             implementation(projects.shared.feature.login.data)

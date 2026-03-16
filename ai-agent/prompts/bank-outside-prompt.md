@@ -98,39 +98,71 @@ Ktor HTTP client setup: `HttpClientFactory` (expect/actual for Android OkHttp / 
 ### `:shared:core:navigation`
 Cross-platform navigation contracts: `Navigator`, `NavigationTarget`, `NavigationRoute`, `NavigationResult`, `FlowNavigator` (SharedFlow-based implementation).
 
+### `:shared:core:presentation`
+Base `ViewModel<Event, State, SideEffect>` class extending `androidx.lifecycle.ViewModel`. Provides:
+- `state: StateFlow<State>` — UI state
+- `sideEffects: SharedFlow<SideEffect>` — one-shot effects (navigation, toasts, etc.)
+- `emitSideEffect(effect)` — protected helper for subclasses
+- `ViewModelEventReceiver<Event>` interface
+
+### `:shared:core:BiometricAuthenticator` *(stubbed in login feature — to be extracted)*
+Platform-agnostic biometric / device-security interface. Currently declared inside `LoginViewModel.kt` and marked with `TODO: move to :shared:core:BiometricAuthenticator`.
+- `BiometricAuthenticator` interface — `isBiometricAvailable()`, `isDeviceSecured()`, `suspend authenticate(): Result<Unit>`, `openBiometricSettings()`
+- `MockBiometricAuthenticator` — mock implementation for development
+- Platform implementations: `BiometricManager + BiometricPrompt` on Android, `LAContext` on iOS
+- Wired via Koin; ViewModel depends on interface only
+
 ### `:shared:core:di`
 Koin module that wires core services: navigator, HTTP client, dispatcher provider, coroutine scope provider.
 
-## Feature Modules (example: `product-catalog`)
+## Feature Modules
 
-### `:shared:feature:product-catalog:domain`
+### `product-catalog` (reference implementation)
+
+#### `:shared:feature:product-catalog:domain`
 - Domain model: `Product`
 - Repository interface: `ProductRepository`
 - Use cases: `GetProductsUseCase`, `GetProductDetailsUseCase`, `SearchProductsUseCase`, `ToggleFavoriteUseCase`, `ObserveFavoritesUseCase`
 
-### `:shared:feature:product-catalog:data`
+#### `:shared:feature:product-catalog:data`
 - Remote: `ProductRemoteDataSource` / `ProductRemoteDataSourceImpl` (Ktor)
 - Local: `FavoriteLocalDataSource` / `FavoriteLocalDataSourceImpl` (SQLDelight)
 - Repository: `ProductRepositoryImpl` — in-memory keyed cache (30 s TTL) + single-flight deduplication
 - Mappers: `ProductMapper`, `PaginatedProductsMapper`, `FavoriteProductEntityMapper`
 
-### `:shared:feature:product-catalog:presentation`
+#### `:shared:feature:product-catalog:presentation`
 - ViewModels: `ProductCatalogHomeViewModel`, `ProductCatalogViewModel`, `ProductDetailsViewModel`, `ProductFavoritesViewModel`
 - State: `ProductCatalogState`, `ProductFavoritesState`
 - Events (sealed interfaces): `ProductCatalogHomeEvent`, `ProductDetailsEvent`, `ProductFavoritesEvent`
 - View data: `ProductViewData`; mappers: `ProductToViewDataMapper`, `ProductViewDataToEntityMapper`
 - Navigation: `ProductCatalogNavigation`; Config: `ProductCatalogConfig`
 
-### `:shared:feature:product-catalog:di`
+#### `:shared:feature:product-catalog:di`
 Koin modules: `productCatalogDataModule`, `productCatalogDomainModule`, `productCatalogPresentationModule`, `productCatalogDatabaseModule`.
+
+### `login` (in progress)
+
+#### `:shared:feature:login:presentation`
+- `LoginState` — sealed class: `Loading`, `CreatePin`, `ConfirmPin`, `BiometricSetupCheck`, `BiometricNotEnrolled`, `LoginWithPin`, `LoginWithBiometric`
+- `LoginEvent` — sealed class covering keypad, create-pin flow, biometric setup, and login flow interactions
+- `LoginViewModel` — depends on `BiometricAuthenticator` (stubbed) and `Navigator`; no side effects (Navigator + BiometricAuthenticator called directly)
+- `LoginNavigationRoutes` — `Login` (entry), `ExitToProductCatalog` (generic exit; mapped to real catalog route in app module)
+- `LoginNavigationTargets` — `ToProductCatalog` clears back stack including `Login`
+
+#### `composeApp` — Android UI
+- `LoginScreen` — two-overload pattern (public ViewModel-connected, private stateless)
+- `PinDisplay` — animated dot row; `PinKeyboard` — 3×4 grid with portrait/landscape sizing
+- Landscape layout: title/dots left, keyboard right, both centred
+- `PinKeyboard` uses `BoxWithConstraints` to compute key size from available width or height (`constrainToHeight` flag); column height set explicitly so `wrapContentHeight` works and avoids infinite constraint crash
+- `MainActivity` updated: `startDestination = LoginNavigationRoutes.Login`; `ExitToProductCatalog` mapped to `ProductCatalogHomeScreen` in `NavHost`
 
 ## Platform App Modules
 
 ### `:composeApp` (Android)
-Jetpack Compose UI. `App` (Application) initialises Koin with `coreModules() + productCatalogModules()`. Single `AppActivity`. Screens: product list, search, details, favourites.
+Jetpack Compose UI. `App` (Application) initialises Koin. Single `AppActivity`. Start destination is now the login screen.
 
 ### `iosApp` (iOS)
-SwiftUI UI. `KoinInitializer` bootstraps Koin from `iosAppFramework`. `ObservableViewModel` bridges Kotlin `ViewModel` + SKIE StateFlow to `@ObservableObject`. `ProductCatalogView` demonstrates ViewModel usage.
+SwiftUI UI. `KoinInitializer` bootstraps Koin from `iosAppFramework`. `ObservableViewModel` bridges Kotlin `ViewModel` + SKIE StateFlow to `@ObservableObject`.
 
 ### `:iosAppFramework`
 Kotlin/Native static framework. Sets up the Koin module graph and exposes it to Swift via SKIE.
@@ -148,22 +180,30 @@ kmp-templates/
     │   ├── data/
     │   ├── network/
     │   ├── navigation/
+    │   ├── presentation/
+    │   ├── biometrics/    # stubbed inside login for now
     │   └── di/
     └── feature/
-        └── product-catalog/
-            ├── domain/
-            ├── data/
-            ├── presentation/
-            └── di/
+        ├── product-catalog/
+        │   ├── domain/
+        │   ├── data/
+        │   ├── presentation/
+        │   └── di/
+        └── login/
+            └── presentation/ # domain/data/di not needed yet
 ```
 
 ## Key Patterns
 - **Repository pattern** with `UpdateStrategy` (ALWAYS_FETCH / ALWAYS_CACHED / TRY_FETCH_ELSE_CACHED / TRY_CACHED_ELSE_FETCH)
 - **Single-flight** deduplication for concurrent identical network requests
 - **In-memory cache** with TTL expiry backed by `MutableStateFlow`
-- **ViewModel events** (sealed interface) instead of direct method calls — simplifies Swift interop
+- **ViewModel events** (sealed class) — UI sends events, ViewModel updates state; simplifies Swift interop
+- **ViewModel side effects** (`SharedFlow<SideEffect>`) for one-shot effects — collected by UI once
+- **No side effects when Navigator / BiometricAuthenticator handle the action directly** — ViewModel calls them as regular dependencies
+- **Cross-feature navigation** — feature emits a generic `ExitTo*` route; app module maps it to the real destination in `NavHost`
+- **BiometricAuthenticator** — suspend function pattern (`authenticate(): Result<Unit>`); no SharedFlow/callback needed
 - **SKIE** for seamless Kotlin Flow to Swift async/await bridging
-- **Moko Resources** for shared string resources across platforms
+- **Moko Resources** for shared string resources across platforms (`MR.strings.*`, import from feature presentation package e.g. `com.yakivmospan.templates.feature.login.presentation.MR`)
 
 # Tech Context
 

@@ -18,7 +18,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "CoreDI"
+            baseName = "BiometricCommon"
             isStatic = true
         }
     }
@@ -26,27 +26,21 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.shared.core.common)
-            implementation(projects.shared.core.data)
-            implementation(projects.shared.core.domain)
-            implementation(projects.shared.core.network)
-            implementation(projects.shared.core.navigation)
-            implementation(projects.shared.core.biometrics)
-
-            // Koin
-            implementation(libs.koin.core)
-
-            // Ktor
-            implementation(libs.ktor.client.core)
+            implementation(libs.kotlinx.coroutines.core)
         }
 
         androidMain.dependencies {
-            implementation(libs.koin.android)
+            implementation(libs.androidx.biometric)
+        }
+
+        iosMain.dependencies {
+            // iOS-specific dependencies if needed
         }
     }
 }
 
 android {
-    namespace = "com.yakivmospan.templates.core.di"
+    namespace = "com.yakivmospan.templates.core.biometrics"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {

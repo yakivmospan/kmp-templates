@@ -35,6 +35,7 @@ include(":composeApp")
 include(":iosAppFramework")
 
 // Core Modules
+include(":shared:core:biometrics")
 include(":shared:core:common")
 include(":shared:core:testing")
 include(":shared:core:domain")

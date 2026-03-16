@@ -19,6 +19,7 @@ kotlin {
             // Core modules
             implementation(projects.shared.core.presentation)
             implementation(projects.shared.core.navigation)
+            implementation(projects.shared.core.biometrics)
             implementation(projects.shared.core.di)
 
             // Feature modules

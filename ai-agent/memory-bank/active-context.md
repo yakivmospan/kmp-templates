@@ -1,22 +1,31 @@
 # Active Context
 
 ## Current Focus
-Template is in a stable, working state. The `product-catalog` feature is fully implemented end-to-end on both Android and iOS and serves as the reference implementation for adding new features.
+`login` feature — platform `BiometricAuthenticator` implementations complete. Next: `login:di` Koin module, PIN persistence, iOS SwiftUI login screen.
 
 ## Recent Decisions
-- Used `androidx.lifecycle.ViewModel` (not a custom base class) so ViewModels work natively on Android and can be consumed from iOS via SKIE.
-- Navigation contracts (`Navigator`, `NavigationRoute`) are cross-platform Kotlin interfaces; concrete routing is handled per-platform in the app modules.
-- `iosAppFramework` module was introduced to encapsulate Koin initialisation and the static framework export for iOS, keeping `iosApp` (Swift) clean.
-- `UpdateStrategy` enum on `ProductRepository` centralises cache/fetch decision logic so callers are not aware of caching internals.
-- ViewModel events (sealed interface) pattern chosen over direct ViewModel methods to reduce Swift adapter boilerplate.
+- `BiometricAuthenticator` extracted to `:shared:core:biometrics` — interface in `commonMain`, platform impls in `androidMain` / `iosMain`.
+- `BiometricAuthenticationException` lives in `commonMain` with `BiometricAuthenticationFailureReason` enum — platform error codes mapped to it in each impl.
+- Android impl uses `androidx.biometric:biometric` (stable 1.1.0) with `BiometricPrompt(FragmentActivity, executor, callback)` — `biometric-ktx` dropped (auth API requires alpha).
+- `MainActivity` changed to extend `AppCompatActivity` (extends `FragmentActivity`) to satisfy `BiometricPrompt` constructor.
+- `BiometricsActivityProvider` / `DefaultBiometricsActivityProvider` in `androidMain` — mirrors `FlowNavigator` pattern; `MainActivity` calls `setActivity(this)` in `onCreate`, `setActivity(null)` in `onDestroy`, injected via Koin `by inject()` delegate.
+- `coreBiometricsModule` is `expect`/`actual` — Android binds `BiometricsActivityProvider` + `BiometricAuthenticatorImpl(activityProvider)`; iOS binds `BiometricAuthenticatorImpl()` only.
+- iOS impl uses `LAContext` per call — fresh instance each `authenticate()` invocation to avoid cached auth result; `@file:OptIn(ExperimentalForeignApi::class)` required.
+- `openBiometricSettings` on Android guards `Settings.ACTION_BIOMETRIC_ENROLL` behind `Build.VERSION.SDK_INT >= R`; falls back to `ACTION_SECURITY_SETTINGS` on API 24–29.
+- Mock stub class removed from `LoginViewModel.kt` — real interface imported from `com.yakivmospan.templates.core.biometrics`.
+- `BiometricCheckboxSpacer` replaced with plain `Spacer(Modifier.height(48.dp))` — invisible empty checkbox was wasteful.
+- `checkBiometricEnrollment` in `LoginViewModel` now calls `isBiometricAvailable()` (not `isDeviceSecured()`) to trigger prompt only when biometrics are enrolled.
+- Login feature uses no `SideEffect` — `Navigator` and `BiometricAuthenticator` called directly as dependencies.
+- Cross-feature navigation: `ExitToProductCatalog` route in `login:presentation`; app module maps it to catalog in `NavHost`.
+- `LoginNavigationTargets.ToProductCatalog` clears back stack including `Login`.
+- Moko Resources for all strings (`MR.strings.*`, import from feature presentation package).
 
 ## Open Questions
-- `NavigationRoute` should be reimplemented with String-based routes (instead of Kotlin Serialization) to properly support iOS navigation.
-- Tab state is not preserved on navigation — `FlowNavigator` / `NavigatorCommandsFlow` needs a backstack-aware update.
-- UI modularisation (separate UI modules per feature) is not done; assess whether it is needed for this template.
-- Moko Resources version (0.26.0) combined with SKIE (0.10.10) may have compatibility constraints to watch.
+- `NavigationRoute` should be reimplemented with String-based routes to support iOS navigation.
+- Tab state not preserved on navigation — `FlowNavigator` / `NavigatorCommandsFlow` needs backstack-aware update.
+- Login data persistence (PIN hash, biometric enabled flag) not yet implemented.
+- iOS SwiftUI login screen not yet implemented.
 
 ## Next Steps
-- Improve iOS navigation to support proper backstack and tab state preservation.
-- Replace Kotlin Serialization–based `NavigationRoute` with a String-route approach for iOS compatibility.
-- Consider adding a `core:ui` shared module for Compose Multiplatform UI utilities if targeting non-Android platforms with Compose.
+- Implement PIN persistence (DataStore / EncryptedSharedPrefs).
+- Wire login into iOS (`iosAppFramework` + SwiftUI screen).
